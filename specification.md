@@ -16,13 +16,8 @@ encoded with the most significant bits first.
 
 ## Layout
 
-| *file signature* |
-| *header*         |
-| delim            |
-| *payload*        |
-| delim            |
-| *checksum*       |
-| delim            |
+| *file signature* | *header* | delim | *payload* | delim | *checksum* | delim |
+|------------------|----------|-------|-----------|-------|------------|-------|
 
 This data is interspersed among a message with non-zero-width characters. The
 message must not contain any of the zero-width characters used to encode the data.
