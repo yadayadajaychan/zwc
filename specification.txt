@@ -1,4 +1,4 @@
-# Specification Version 0.1 (Draft)
+# Specification Version 0.2 (Draft)
 
 ## Data encoding
 
@@ -11,43 +11,58 @@
 | delim | U+034F  | combining grapheme joiner | 0xCD8F   |
 
 Each character encodes two bits of data. There is also a delimiter character
-to delimit the header, payload, and checksum from each other.
+to delimit the header, payload, and checksum from each other. Bytes of data are
+encoded with the most significant bits first.
 
 ## Layout
 
-`*file signature* *header* delim *payload* delim *checksum* delim`
+| *file signature* |
+| *header*         |
+| delim            |
+| *payload*        |
+| delim            |
+| *checksum*       |
+| delim            |
 
 This data is interspersed among a message with non-zero-width characters. The
 message must not contain any of the zero-width characters used to encode the data.
 
 ## File signature
 
-0 followed by delim. Must appear directly after the first non-whitespace
+0 followed by delim (U+200B U+034F). Must appear directly after the first non-whitespace
 character.
 
 ## Header
 
-4 bit field. Sum of the following configurations:
+The header appears after the file signature and is a 3 bit field with 1 parity
+bit (4 bits total). The parity bit is the most significant bit and the parity is
+even. Below are the possible configurations:
 
 | num |      config      |
 |-----|------------------|
-|   1 | CRC-8            |
-|   2 | md5              |
-|   4 | gzip compression |
-|   8 | Reed-Solomon ECC |
+|   0 | none             |
+|   1 | crc-8            |
+|   2 | crc-16           |
+|   3 | crc-32           |
+|   4 | crc-64           |
+|   5 | md5              |
+|   6 | sha-256          |
+|   7 | Reed-Solomon ECC |
 
-crc-8, md5 and reed-solomon are mutually exclusive, as are gzip and reed-solomon.
+E.g. to set the checksum as crc-64, the header would be
+0b1100 -> 3 0 -> U+2060 U+200B
 
 ## Payload
 
-Values are stored with the most significant bits first. E.g. 0b10110100 ->
-2 3 1 0 -> U+200D U+2060 U+200C U+200B. The payload is separated from the header
-and checksum by the delim character.
+The actual data being hidden by the user is encoded in the payload. Each byte
+will require 4 zero-width characters to encode it. E.g. 0b10110100 -> 2 3 1 0 ->
+U+200D U+2060 U+200C U+200B. The payload is separated from the header and
+checksum by the delim character.
 
-If either gzip compression or Reed-Solomon ECC is specified, the data is
-compressed or encoded with ECC before being converted to zero-width characters.
+If Reed-Solomon ECC is specified, the data is encoded with ECC before being
+converted to zero-width characters.
 
 ## Checksum
 
-Depending on the header config, there will either be a crc-8, md5, or no
-checksum. Regardless, this section is ended with a delim character.
+This section contains the encoded checksum and it must be ended with a delim
+character even if there is no checksum.
