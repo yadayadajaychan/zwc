@@ -1,0 +1,53 @@
+# Specification Version 0.1 (Draft)
+
+## Data encoding
+
+| data  | unicode |        description        |  utf-8   |
+|-------|---------|---------------------------|----------|
+| 0     | U+200B  | zero-width space          | 0xE2808B |
+| 1     | U+200C  | zero width non-joiner     | 0xE2808C |
+| 2     | U+200D  | zero-width joiner         | 0xE2808D |
+| 3     | U+2060  | word-joiner               | 0xE281A0 |
+| delim | U+034F  | combining grapheme joiner | 0xCD8F   |
+
+Each character encodes two bits of data. There is also a delimiter character
+to delimit the header, payload, and checksum from each other.
+
+## Layout
+
+`*file signature* *header* delim *payload* delim *checksum* delim`
+
+This data is interspersed among a message with non-zero-width characters. The
+message must not contain any of the zero-width characters used to encode the data.
+
+## File signature
+
+0 followed by delim. Must appear directly after the first non-whitespace
+character.
+
+## Header
+
+4 bit field. Sum of the following configurations:
+
+| num |      config      |
+|-----|------------------|
+|   1 | CRC-8            |
+|   2 | md5              |
+|   4 | gzip compression |
+|   8 | Reed-Solomon ECC |
+
+crc-8, md5 and reed-solomon are mutually exclusive, as are gzip and reed-solomon.
+
+## Payload
+
+Values are stored with the most significant bits first. E.g. 0b10110100 ->
+2 3 1 0 -> U+200D U+2060 U+200C U+200B. The payload is separated from the header
+and checksum by the delim character.
+
+If either gzip compression or Reed-Solomon ECC is specified, the data is
+compressed or encoded with ECC before being converted to zero-width characters.
+
+## Checksum
+
+Depending on the header config, there will either be a crc-8, md5, or no
+checksum. Regardless, this section is ended with a delim character.
