@@ -1,4 +1,4 @@
-# Specification Version 0.2 (Draft)
+# ZWC Specification Version 0.2 (Draft)
 
 ## Data encoding
 
