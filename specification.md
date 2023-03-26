@@ -1,4 +1,8 @@
-# ZWC Specification Version 0.2 (Draft)
+# ZWC Specification Version 0.3 (Draft)
+
+The ZWC format describes how data should be encoded as zero-width characters.
+This encoded data is then put inside a message of non-zero-width characters.
+The result is a text stream with a visible message but hidden data.
 
 ## Data encoding
 
@@ -12,20 +16,22 @@
 
 Each character encodes two bits of data. There is also a delimiter character
 to delimit the header, payload, and checksum from each other. Bytes of data are
-encoded with the most significant bits first.
+split into 4 and encoded with the most significant bits first.
+E.g. 0b10110100 -> 2 3 1 0 -> U+200D U+2060 U+200C U+200B.
 
 ## Layout
 
 | *file signature* | *header* | delim | *payload* | delim | *checksum* | delim |
 |------------------|----------|-------|-----------|-------|------------|-------|
 
-This data is interspersed among a message with non-zero-width characters. The
-message must not contain any of the zero-width characters used to encode the data.
+The encoded data is interspersed among a message with non-zero-width characters.
+When decoding, any characters not in the data encoding table are ignored. The
+message must not contain any of the zero-width characters used to encode the
+data. There may be multiple files within the same message.
 
 ## File signature
 
-0 followed by delim (U+200B U+034F). Must appear directly after the first non-whitespace
-character.
+0 followed by delim (U+200B U+034F).
 
 ## Header
 
@@ -50,9 +56,8 @@ E.g. to set the checksum as crc-64, the header would be
 ## Payload
 
 The actual data being hidden by the user is encoded in the payload. Each byte
-will require 4 zero-width characters to encode it. E.g. 0b10110100 -> 2 3 1 0 ->
-U+200D U+2060 U+200C U+200B. The payload is separated from the header and
-checksum by the delim character.
+will require 4 zero-width characters to encode it. The payload is separated from
+the header and checksum by the delim character.
 
 If Reed-Solomon ECC is specified, the data is encoded with ECC before being
 converted to zero-width characters.
