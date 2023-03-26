@@ -1,0 +1,137 @@
+.\" Manpage for zwc
+.TH ZWC 1 2023-03-26 "zwc v0.0.1" "User Commands"
+.SH NAME
+zwc \- encodes/decodes data into zero-width utf-8 characters
+.SH SYNOPSIS
+\fBzwc\fR \fIsubcommand\fR [\fIargs\fR]
+.SH DESCRIPTION
+.PP
+\fBzwc\fR is a program for encoding arbritary data into zero-width utf-8
+characters and decoding it back. These zero-width characters are not rendered
+as visible chracters. These zero-width characters are then placed inside a
+message, hiding the data within the message.
+.PP
+\fImessage\fR refers to the utf-8 text which will be visible to viewers.
+\fIdata\fR is the data to be encoded into zero-width utf-8 characters and
+inserted into the \fImessage\fR. \fItext\fR is the final product with the
+encoded \fIdata\fR hidden in the \fImessage\fR.
+.SH SUBCOMMAND
+.SS encode\fR [\fB\-inr\fR] [\fB\-c\fR \fIchecksum\fR] [\fB\-d\fR \fIdata\fR] [\fB\-m\fR \fImessage\fR]
+\fBzwc\fR takes \fIdata\fR, encodes it into zero-width characters, and inserts
+it into \fImessage\fR. The resulting text is sent to standard output.
+.PP
+\fBOptions\fR
+.TP
+\fB\-d\fR \fIdata\fR
+Specifies the data file to read from.
+.TP
+\fB\-m\fR \fImessage\fR
+Specifies the message file to read from.
+.TP
+\fB\-i\fR
+When neither \fIdata\fR or \fImessage\fR are supplied, this option allows the
+user to interactively supply both the data and message from stdin. Otherwise,
+this option has no effect.
+.TP
+\fB\-n\fR
+Do not intersperse the encoded data within a message.
+.TP
+\fB\-c\fR \fIchecksum\fR
+Specifies the checksum to use when encoding the message. Valid values are:
+none, crc8, crc16, crc32, crc64, md5, sha256.
+.TP
+\fB\-r\fR
+Use Reed-Solomon error correction. When this option is used, checksum defaults
+to "none".
+.SS decode\fR [\fB\-fm\fR] [\fB\-t\fR \fItext\fR]
+\fBzwc\fR takes \fItext\fR, decodes the data, and sends that data to standard output.
+.PP
+\fBOptions\fR
+.TP
+\fB\-t\fR \fItext\fR
+Specifies the text file to read from.
+.TP
+\fB\-m\fR
+Outputs the message instead of the data.
+.TP
+\fB\-f\fR
+Force \fBzwc\fR to interpret the payload as Reed-Solomon encoded data, even if
+the header says otherwise.
+.SS test\fR [\fB\-f\fR] [\fB\-t\fR \fItext\fR]
+Shares the same options and behavior as the "decode" subcommand but doesn't
+output the decoded data to standard output and the \fB\-m\fR option has no effect.
+.SS version
+Displays version information and file format specification version.
+.SH OPTIONS
+Options which are common to all subcommands.
+.TP
+\fB\-v\fR
+Verbosely explain what is happening. Specify twice for more verbose output.
+.TP
+\fB\-q\fR
+Suppress warnings.
+.TP
+\fB\-s\fR
+Silence errors and warnings.
+.SH EXIT STATUS
+.TP
+\fB0\fR
+Success
+.TP
+\fB1\fR
+Minor errors
+.TP
+\fB2\fR
+Major errors
+.SH NOTES
+.PP
+When decoding, if there are multiple files within the same message, they will
+be concatenated and a warning will be issued. If the encoded checksum differs
+from the one specified in the header, the checksum of the appropriate length is
+tried and a warning is issued.
+.PP
+When pasting into the terminal, the maximum line length is 4096 chars and
+anything after that is discarded. This ensures that the terminal can always
+receive more input until at least one line can be read, but as a consequence,
+\fBzwc\fR will be unable to read the discarded characters. If this is the case,
+use a file or a pipe instead of the terminal.
+.PP
+This program currently can\'t parse the argument \'\-\' as stdin/stdout. In
+addition, if data is read from stdin in encode mode, \fBzwc\fR will not spread
+out the encoded data in the message because it can't get the size of the input
+stream.
+.PP
+Each zero-width character takes up 3 bytes but only encodes two bits of data,
+meaning 12 bytes is going to be needed to encode 1 byte of data.
+.PP
+The message can not contain any of the utf-8 characters used to encode the
+data, namely U+200B, U+200C, U+200D, U+2060, and U+034F.
+.SH BUGS
+Report bugs to https://github.com/yadayadajaychan/zwc/issues
+.SH EXAMPLES
+\fB$ zwc encode -d data\fR
+.PP
+Encodes data from file named "data", reads message from stdin, and outputs text
+to stdout
+
+\fB$ zwc encode -m message\fR
+.PP
+Encodes data from stdin, reads message from file named "message", and outputs
+text to stdout
+
+\fB$ zwc encode -d data -m message\fR
+.PP
+Encodes data from file named "data", reads message from file named "message",
+and outputs text to stdout
+
+\fB$ zwc decode -t text\fR
+.PP
+Reads text from file named "text" and outputs the decoded data to stdout
+
+\fB$ zwc decode\fR
+.PP
+Reads text from stdin and outputs the decoded data to stdout
+.SH AUTHOR
+This manual page was written by Ethan Cheng <ethanrc0528@gmail.com>
+.SH SEE ALSO
+Project page: https://github.com/yadayadajaychan/zwc
