@@ -16,7 +16,7 @@ message, hiding the data within the message.
 inserted into the \fImessage\fR. \fItext\fR is the final product with the
 encoded \fIdata\fR hidden in the \fImessage\fR.
 .SH SUBCOMMAND
-.SS encode\fR [\fB\-inr\fR] [\fB\-c\fR \fIchecksum\fR] [\fB\-d\fR \fIdata\fR] [\fB\-m\fR \fImessage\fR]
+.SS encode\fR [\fB\-d\fR \fIdata\fR] [\fB\-m\fR \fImessage\fR] [\fB\-inr\fR] [\fB\-c\fR \fIchecksum\fR] [\fB\-e\fR \fIencoding\fR]
 \fBzwc\fR takes \fIdata\fR, encodes it into zero-width characters, and inserts
 it into \fImessage\fR. The resulting text is sent to standard output.
 .PP
@@ -37,13 +37,16 @@ this option has no effect.
 Do not intersperse the encoded data within a message.
 .TP
 \fB\-c\fR \fIchecksum\fR
-Specifies the checksum to use when encoding the message. Valid values are:
+Specifies the checksum to use when encoding the message. Valid arguments are:
 none, crc8, crc16, crc32, crc64, md5, sha256.
 .TP
 \fB\-r\fR
 Use Reed-Solomon error correction. When this option is used, checksum defaults
 to "none".
-.SS decode\fR [\fB\-fm\fR] [\fB\-t\fR \fItext\fR]
+.TP
+\fB\-e\fR \fIencoding\fR
+Choose which encoding for the data to use. Valid arguments are: 2bit, 3bit, 4bit.
+.SS decode\fR [\fB\-t\fR \fItext\fR] [\fB\-m\fR] [\fB\-f\fR \fIencoding\fR]...
 \fBzwc\fR takes \fItext\fR, decodes the data, and sends that data to standard output.
 .PP
 \fBOptions\fR
@@ -54,10 +57,10 @@ Specifies the text file to read from.
 \fB\-m\fR
 Outputs the message instead of the data.
 .TP
-\fB\-f\fR
-Force \fBzwc\fR to interpret the payload as Reed-Solomon encoded data, even if
-the header says otherwise.
-.SS test\fR [\fB\-f\fR] [\fB\-t\fR \fItext\fR]
+\fB\-f\fR \fIencoding\fR
+Force \fBzwc\fR to interpret the encoding of the data as \fIencoding\fR, even if
+the header says otherwise. Valid values for \fIencoding\fR are: 2bit, 3bit, 4bit, rs.
+.SS test\fR [\fB\-t\fR \fItext\fR] [\fB\-f\fR \fIencoding\fR]...
 Shares the same options and behavior as the "decode" subcommand but doesn't
 output the decoded data to standard output and the \fB\-m\fR option has no effect.
 .SS version
@@ -85,6 +88,19 @@ Minor errors
 Major errors
 .SH NOTES
 .PP
+There are three encodings that may be used. 2 bit encoding uses 4 zero-width
+characters (not including the delimiter character) to encode the data. This
+means each character represents 2 bits of data. 3 bit encoding uses 8
+characters each representing 3 bits of data. 4 bit encoding uses 16 characters
+each representing 4 bits of data. Using a denser encoding is more efficient
+in terms of encoded data size but may cause more issues because there are more
+characters being used which can potentially interfere with the message
+(depending on the language of the message).
+.PP
+The message can not contain any of the zero-width characters used to encode the data.
+To see which zero-width characters are used for each encoding type, refer to the
+specification found in the project page.
+.PP
 When decoding, if there are multiple files within the same message, they will
 be concatenated and a warning will be issued. If the encoded checksum differs
 from the one specified in the header, the checksum of the appropriate length is
@@ -100,12 +116,6 @@ This program currently can\'t parse the argument \'\-\' as stdin/stdout. In
 addition, if data is read from stdin in encode mode, \fBzwc\fR will not spread
 out the encoded data in the message because it can't get the size of the input
 stream.
-.PP
-Each zero-width character takes up 3 bytes but only encodes two bits of data,
-meaning 12 bytes is going to be needed to encode 1 byte of data.
-.PP
-The message can not contain any of the utf-8 characters used to encode the
-data, namely U+200B, U+200C, U+200D, U+2060, and U+034F.
 .SH BUGS
 Report bugs to https://github.com/yadayadajaychan/zwc/issues
 .SH EXAMPLES
