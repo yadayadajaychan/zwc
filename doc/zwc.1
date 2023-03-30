@@ -105,9 +105,6 @@ Minor errors
 \fB2\fR
 Major errors
 .SH NOTES
-.PP
-For now, only utf-8 is supported.
-.PP
 There are three encodings that may be used. 2 bit encoding uses 4 zero-width
 characters (not including the delimiter character) to encode the data. This
 means each character represents 2 bits of data. 3 bit encoding uses 8
@@ -117,27 +114,27 @@ in terms of encoded data size but may cause more issues because there are more
 characters being used which can potentially interfere with the message
 (depending on the language of the message).
 .PP
-The message can not contain any of the zero-width characters used to encode the data.
-To see which zero-width characters are used for each encoding type, refer to the
-specification found in the project page.
-.PP
 When decoding, if there are multiple files within the same message, they will
 be concatenated and a warning will be issued. If the encoded checksum differs
 from the one specified in the header, the checksum of the appropriate length is
 tried and a warning is issued.
+.SH CAVEATS
+The message may not contain any of the zero-width characters used to encode the data.
+To see which zero-width characters are used for each encoding type, refer to the
+specification found in the project page.
 .PP
 When pasting into the terminal, the maximum line length is 4096 chars and
 anything after that is discarded. This ensures that the terminal can always
 receive more input until at least one line can be read, but as a consequence,
 \fBzwc\fR will be unable to read the discarded characters. If this is the case,
 use a file or a pipe instead of the terminal.
+.SH BUGS
+For now, only utf-8 is supported.
 .PP
 This program currently can\'t parse the argument \'\-\' as stdin/stdout. In
 addition, if data is read from stdin in encode mode, \fBzwc\fR will not spread
 out the encoded data in the message because it can't get the size of the input
 stream.
-.SH BUGS
-Report bugs to https://github.com/yadayadajaychan/zwc/issues
 .SH EXAMPLES
 \fB$ zwc encode -d data\fR
 .PP
@@ -163,5 +160,14 @@ Reads text from file named "text" and outputs the decoded data to stdout
 Reads text from stdin and outputs the decoded data to stdout
 .SH AUTHOR
 This program and accompanying manual were written by Ethan Cheng <ethanrc0528@gmail.com>
+.SH REPORTING BUGS
+Report bugs to https://github.com/yadayadajaychan/zwc/issues
+.SH COPYRIGHT
+Copyright (C) 2023 Ethan Cheng
+.br
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
 .SH SEE ALSO
 Project page: https://github.com/yadayadajaychan/zwc
