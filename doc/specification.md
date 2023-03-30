@@ -1,4 +1,5 @@
-# ZWC Specification Version 0.4 (Draft)
+# ZWC File Format Specification Version 0.4 (Draft)
+
 
 The ZWC format describes how data should be encoded as zero-width characters.
 This encoded data is then put inside a message of non-zero-width characters.
