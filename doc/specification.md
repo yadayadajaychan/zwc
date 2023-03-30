@@ -117,7 +117,7 @@ converted to zero-width characters.
 This section contains the encoded checksum and it must be ended with a delim
 character even if there is no checksum.
 
-# Copyright
+# Copyright Information
 
 Copyright (C) 2023 Ethan Cheng
 
