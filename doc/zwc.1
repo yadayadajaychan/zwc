@@ -32,6 +32,8 @@ message, hiding the data within the message.
 inserted into the \fImessage\fR. \fItext\fR is the final product with the
 encoded \fIdata\fR hidden in the \fImessage\fR.
 .SH SUBCOMMAND
+Each subcommand can be abbreviated. For example, \fBe\fR, \fBen\fR, \fBenc\fR, etc. can be
+used to specify the \fBencode\fR subcommand.
 .SS encode\fR [\fB\-d\fR \fIdata\fR] [\fB\-m\fR \fImessage\fR] [\fB\-inr\fR] [\fB\-c\fR \fIchecksum\fR] [\fB\-e\fR \fIencoding\fR]
 \fBzwc\fR takes \fIdata\fR, encodes it into zero-width characters, and inserts
 it into \fImessage\fR. The resulting text is sent to standard output.
