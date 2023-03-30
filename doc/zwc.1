@@ -17,7 +17,7 @@
 .\" with ZWC. If not, see <https://www.gnu.org/licenses/>.
 .TH ZWC 1 2023-03-29 "ZWC v0.0.1" "ZWC Manual"
 .SH NAME
-zwc \- encodes/decodes data into zero-width utf-8 characters
+zwc \- encodes/decodes data into zero-width characters
 .SH SYNOPSIS
 \fBzwc\fR \fIsubcommand\fR [\fIargs\fR]
 .SH DESCRIPTION
@@ -105,6 +105,8 @@ Minor errors
 \fB2\fR
 Major errors
 .SH NOTES
+.PP
+For now, only utf-8 is supported.
 .PP
 There are three encodings that may be used. 2 bit encoding uses 4 zero-width
 characters (not including the delimiter character) to encode the data. This
