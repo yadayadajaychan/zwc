@@ -1,4 +1,4 @@
-# ZWC File Format Specification Version 0.4 (Draft)
+# ZWC File Format Specification Version 0.5 (Draft)
 
 
 The ZWC format describes how data should be encoded as zero-width characters.
@@ -73,34 +73,44 @@ message.
 ## Header
 
 The header uses 2 bit encoding regardless of what encoding is used for the
-payload and checksum. The header appears after the file signature and is a
-5 bit field with a 3 bit crc (8 bits total). The upper 2 bits specify the
-encoding used. The lower 3 bits specify the checksum used for the payload.
+payload and checksum. The header appears after the file signature and is 10 bits
+long.
 
-| encoding | checksum | crc-3 |
-|----------|----------|-------|
+| Field Name | Offset (bits) | Length (bits) |           Description            |
+|------------|---------------|---------------|----------------------------------|
+| version    |             0 |             2 | major version of zwc file format |
+| encoding   |             2 |             2 | encoding used for the payload    |
+| checksum   |             4 |             3 | checksum used for the payload    |
+| crc-3-gsm  |             7 |             3 | crc used to protect the header   |
 
 Below are the possible configurations:
 
-| num | encoding |
-|-----|----------|
-|   0 | 2 bit    |
-|   1 | 3 bit    |
-|   2 | 4 bit    |
+| version | value |
+|---------|-------|
+| v1      |     0 |
+| v2      |     1 |
+| v3      |     2 |
+| v4      |     3 |
 
-| num |     checksum     |
-|-----|------------------|
-|   0 | none             |
-|   1 | crc-8            |
-|   2 | crc-16           |
-|   3 | crc-32           |
-|   4 | crc-64           |
-|   5 | md5              |
-|   6 | sha-256          |
-|   7 | Reed-Solomon ECC |
+| encoding | value |
+|----------|-------|
+| 2 bit    |     0 |
+| 3 bit    |     1 |
+| 4 bit    |     2 |
 
-E.g. to set the encoding as 4 bit and the checksum as crc-32, the header would
-be 0b10011.
+|     checksum     | value |
+|------------------|-------|
+| none             |     0 |
+| crc-8            |     1 |
+| crc-16           |     2 |
+| crc-32           |     3 |
+| crc-64           |     4 |
+| md5              |     5 |
+| sha-256          |     6 |
+| Reed-Solomon ECC |     7 |
+
+E.g. to set the file format as version 2, the encoding as 4 bit and the checksum
+as crc-32, the header would be 0b01\_10\_011_(crc-3-gsm).
 
 ## Payload
 
