@@ -1,4 +1,4 @@
-# ZWC File Format Specification Version 0.5 (Draft)
+# ZWC File Format Specification Version 0.6 (Draft)
 
 
 The ZWC format describes how data should be encoded as zero-width characters.
@@ -57,8 +57,8 @@ E.g. 0b10110100 -> 11 4 -> U+206D U+2061.
 
 ## Layout
 
-| *file signature* | *header* | delim | *payload* | delim | *checksum* | delim |
-|------------------|----------|-------|-----------|-------|------------|-------|
+| *file signature* | *header* | delim | *payload* | delim | *checksum* |
+|------------------|----------|-------|-----------|-------|------------|
 
 The encoded data is interspersed among a message with non-zero-width characters.
 When decoding, any characters not in the data encoding table for the selected
@@ -68,7 +68,7 @@ message.
 
 ## File signature
 
-0 followed by delim (U+200B U+034F).
+delim (U+034F)
 
 ## Header
 
@@ -124,8 +124,7 @@ converted to zero-width characters.
 
 ## Checksum
 
-This section contains the encoded checksum and it must be ended with a delim
-character even if there is no checksum.
+This section contains the encoded checksum and must not end with a delim character.
 
 # Copyright Information
 
