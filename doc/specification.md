@@ -1,6 +1,5 @@
 # ZWC File Format Specification Version 0.6 (Draft)
 
-
 The ZWC format describes how data should be encoded as zero-width characters.
 This encoded data is then put inside a message of non-zero-width characters.
 The result is a text stream with a visible message but hidden data.
@@ -134,8 +133,7 @@ This file is part of ZWC.
 
 ZWC is free software: you can redistribute it and/or modify it under the
 terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any
-later version.
+Foundation, version 3 of the License.
 
 ZWC is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
