@@ -14,28 +14,37 @@
 .\"
 .\" You should have received a copy of the GNU General Public License along
 .\" with ZWC. If not, see <https://www.gnu.org/licenses/>.
-.TH ZWC 1 2023-03-29 "ZWC v0.0.1" "ZWC Manual"
+.TH ZWC 1 2023-05-15 "ZWC v0.0.1" "ZWC Manual"
 .SH NAME
 zwc \- encodes/decodes data into zero-width characters
 .SH SYNOPSIS
 \fBzwc\fR \fIsubcommand\fR [\fIargs\fR]
 .SH DESCRIPTION
 .PP
-\fBzwc\fR is a program for encoding arbritary data into zero-width utf-8
-characters and decoding it back. These zero-width characters are not rendered
-as visible chracters. These zero-width characters are then placed inside a
-message, hiding the data within the message.
+\fBzwc\fR is a program for
+encoding arbritary data into zero-width utf-8 characters
+and decoding it back.
+These zero-width characters are not rendered as visible chracters.
+These zero-width characters are then placed inside a message,
+hiding the data within the message.
 .PP
 \fImessage\fR refers to the utf-8 text which will be visible to viewers.
 \fIdata\fR is the data to be encoded into zero-width utf-8 characters and
-inserted into the \fImessage\fR. \fItext\fR is the final product with the
-encoded \fIdata\fR hidden in the \fImessage\fR.
+inserted into the \fImessage\fR.
+\fItext\fR is the final product with
+the encoded \fIdata\fR hidden in the \fImessage\fR.
 .SH SUBCOMMAND
-Each subcommand can be abbreviated. For example, \fBe\fR, \fBen\fR, \fBenc\fR, etc. can be
-used to specify the \fBencode\fR subcommand.
-.SS encode\fR [\fB\-d\fR \fIdata\fR] [\fB\-m\fR \fImessage\fR] [\fB\-inr\fR] [\fB\-c\fR \fIchecksum\fR] [\fB\-e\fR \fIencoding\fR]
-\fBzwc\fR takes \fIdata\fR, encodes it into zero-width characters, and inserts
-it into \fImessage\fR. The resulting text is sent to standard output.
+Each subcommand can be abbreviated.
+For example, \fBe\fR, \fBen\fR, \fBenc\fR, etc.
+can be used to specify the \fBencode\fR subcommand.
+.SS encode\fR [\fB\-d\fR \fIdata\fR] [\fB\-m\fR \fImessage\fR] \
+[\fB\-inr\fR] [\fB\-c\fR \fIchecksum\fR] [\fB\-e\fR \fIencoding\fR]
+\fBzwc\fR takes \fIdata\fR,
+encodes it into zero-width characters,
+and inserts it into \fImessage\fR.
+The resulting text is sent to standard output.
+If either \fIdata\fR or \fImessage\fR are not given,
+it is read from stdin.
 .PP
 \fBOptions\fR
 .TP
@@ -46,25 +55,34 @@ Specifies the data file to read from.
 Specifies the message file to read from.
 .TP
 \fB\-i\fR
-When neither \fIdata\fR or \fImessage\fR are supplied, this option allows the
-user to interactively supply both the data and message from stdin. Otherwise,
+When neither \fIdata\fR or \fImessage\fR are supplied,
+this option allows the user to
+interactively supply both the data and message from the terminal.
+Otherwise, if \fIdata\fR or \fImessage\fR are supplied,
 this option has no effect.
+This option will work even if stdin is connected to a pipe,
+given that the data and message are separated by
+the string "EOF" on its own line
+(the data must come before the message).
 .TP
 \fB\-n\fR
 Do not intersperse the encoded data within a message.
 .TP
 \fB\-c\fR \fIchecksum\fR
-Specifies the checksum to use when encoding the message. Valid arguments are:
-none, crc8, crc16, crc32, crc64, md5, sha256.
+Specifies the checksum to use when encoding the message.
+Valid arguments are: none, crc8, crc16, crc32, crc64, md5, sha256.
 .TP
 \fB\-r\fR
-Use Reed-Solomon error correction. When this option is used, checksum defaults
-to "none".
+Use Reed-Solomon error correction.
+When this flag is used, checksum is restricted to "none".
 .TP
 \fB\-e\fR \fIencoding\fR
 Choose which encoding for the data to use. Valid arguments are: 2bit, 3bit, 4bit.
-.SS decode\fR [\fB\-t\fR \fItext\fR] [\fB\-m\fR] [\fB\-f\fR \fIencoding\fR]...
-\fBzwc\fR takes \fItext\fR, decodes the hidden data, and sends that data to standard output.
+.SS decode\fR [\fB\-t\fR \fItext\fR] [\fB\-mc\fR] [\fB\-f\fR \fIencoding\fR]...
+\fBzwc\fR takes \fItext\fR,
+decodes the hidden data,
+and sends that data to standard output.
+If \fItext\fR is not given, it is read from stdin.
 .PP
 \fBOptions\fR
 .TP
@@ -72,14 +90,20 @@ Choose which encoding for the data to use. Valid arguments are: 2bit, 3bit, 4bit
 Specifies the text file to read from.
 .TP
 \fB\-m\fR
-Outputs the message instead of the data.
+Output the message instead of the data.
+.TP
+\fB\-c\fR
+Output the checksum value in hexadecimal instead of the data.
 .TP
 \fB\-f\fR \fIencoding\fR
-Force \fBzwc\fR to interpret the encoding of the data as \fIencoding\fR, even if
-the header says otherwise. Valid values for \fIencoding\fR are: 2bit, 3bit, 4bit, rs.
+Force \fBzwc\fR to interpret the encoding of the data as \fIencoding\fR,
+even if the header says otherwise.
+Valid values for \fIencoding\fR are: 2bit, 3bit, 4bit, rs.
 .SS test\fR [\fB\-t\fR \fItext\fR] [\fB\-f\fR \fIencoding\fR]...
-Shares the same options and behavior as the "decode" subcommand but doesn't
-output the decoded data to standard output and the \fB\-m\fR option has no effect.
+Used to test the integrity of \fItext\fR.
+Shares the same options and behavior as the "decode" subcommand but
+doesn't output anything to stdout.
+The \fB\-m\fR and \fB\-c\fR options have no effect.
 .SS help\fR [\fIsubcommand\fR]
 Display help information and subcommand usage.
 .SS version
@@ -130,10 +154,9 @@ receive more input until at least one line can be read, but as a consequence,
 \fBzwc\fR will be unable to read the discarded characters. If this is the case,
 use a file or a pipe instead of the terminal.
 .SH BUGS
-For now, only utf-8 is supported.
+Only utf-8 is supported.
 .PP
-This program currently can\'t parse the argument \'\-\' as stdin/stdout. In
-addition, if data is read from stdin in encode mode, \fBzwc\fR will not spread
+If data is read from stdin in encode mode, \fBzwc\fR will not spread
 out the encoded data in the message because it can't get the size of the input
 stream.
 .SH EXAMPLES
