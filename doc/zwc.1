@@ -77,7 +77,7 @@ Use Reed-Solomon error correction.
 When this flag is used, checksum is restricted to "none".
 .TP
 \fB\-e\fR \fIencoding\fR
-Choose which encoding for the data to use. Valid arguments are: 2bit, 3bit, 4bit.
+Choose which encoding for the data to use. Valid arguments are: 2, 3, 4.
 .SS decode\fR [\fB\-t\fR \fItext\fR] [\fB\-mc\fR] [\fB\-f\fR \fIencoding\fR]...
 \fBzwc\fR takes \fItext\fR,
 decodes the hidden data,
@@ -98,7 +98,7 @@ Output the checksum value in hexadecimal instead of the data.
 \fB\-f\fR \fIencoding\fR
 Force \fBzwc\fR to interpret the encoding of the data as \fIencoding\fR,
 even if the header says otherwise.
-Valid values for \fIencoding\fR are: 2bit, 3bit, 4bit, rs.
+Valid values for \fIencoding\fR are: 2, 3, 4, rs.
 .SS test\fR [\fB\-t\fR \fItext\fR] [\fB\-f\fR \fIencoding\fR]...
 Used to test the integrity of \fItext\fR.
 Shares the same options and behavior as the "decode" subcommand but
@@ -130,23 +130,27 @@ Minor errors
 \fB2\fR
 Major errors
 .SH NOTES
-There are three encodings that may be used. 2 bit encoding uses 4 zero-width
-characters (not including the delimiter character) to encode the data. This
-means each character represents 2 bits of data. 3 bit encoding uses 8
-characters each representing 3 bits of data. 4 bit encoding uses 16 characters
-each representing 4 bits of data. Using a denser encoding is more efficient
-in terms of encoded data size but may cause more issues because there are more
-characters being used which can potentially interfere with the message
+There are three encodings that may be used.
+2 bit encoding uses 4 zero-width characters
+(not including the delimiter character) to encode the data.
+This means each character represents 2 bits of data.
+3 bit encoding uses 8 characters each representing 3 bits of data.
+4 bit encoding uses 16 characters each representing 4 bits of data.
+Using a denser encoding is more efficient in terms of encoded data size but
+may cause more issues because there are more characters being used
+which can potentially interfere with the message
 (depending on the language of the message).
 .PP
-When decoding, if there are multiple files within the same message, they will
-be concatenated and a warning will be issued. If the encoded checksum differs
-from the one specified in the header, the checksum of the appropriate length is
-tried and a warning is issued.
+When decoding, if there are multiple files within the same message,
+they will be concatenated and a warning will be issued.
+If the length of the encoded checksum differs from
+the one specified in the header,
+the checksum of the appropriate length is tried and a warning is issued.
 .SH CAVEATS
-The message may not contain any of the zero-width characters used to encode the data.
-To see which zero-width characters are used for each encoding type, refer to the
-specification found in the project page.
+The message may not contain
+any of the zero-width characters used to encode the data.
+To see which zero-width characters are used for each encoding type,
+refer to \fBzwc\fR(5) or the specification found on the ZWC project page.
 .PP
 When pasting into the terminal, the maximum line length is 4096 chars and
 anything after that is discarded. This ensures that the terminal can always
@@ -183,9 +187,9 @@ Reads text from file named "text" and outputs the decoded data to stdout
 .PP
 Reads text from stdin and outputs the decoded data to stdout
 .SH AUTHOR
-This program and accompanying manual were written by Ethan Cheng <ethanrc0528@gmail.com>
+This program and accompanying manuals were written by Ethan Cheng <ethanrc0528@gmail.com>
 .SH REPORTING BUGS
-Report bugs to https://github.com/yadayadajaychan/zwc/issues
+Report bugs to <https://github.com/yadayadajaychan/zwc/issues>
 .SH COPYRIGHT
 Copyright (C) 2023 Ethan Cheng
 .br
@@ -195,4 +199,6 @@ This is free software: you are free to change and redistribute it.
 .br
 There is NO WARRANTY, to the extent permitted by law.
 .SH SEE ALSO
-Project page: https://github.com/yadayadajaychan/zwc
+\fBzwc\fR(5)
+.PP
+Project page: <https://github.com/yadayadajaychan/zwc>
