@@ -1,0 +1,175 @@
+'\" t
+.\"
+.\" File Format Manual for ZWC
+.\" Copyright (C) 2023 Ethan Cheng
+.\"
+.\" This file is part of ZWC.
+.\"
+.\" ZWC is free software: you can redistribute it and/or modify it under the
+.\" terms of the GNU General Public License as published by the Free Software
+.\" Foundation, version 3 of the License.
+.\"
+.\" ZWC is distributed in the hope that it will be useful, but WITHOUT ANY
+.\" WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+.\" FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+.\" details.
+.\"
+.\" You should have received a copy of the GNU General Public License along
+.\" with ZWC. If not, see <https://www.gnu.org/licenses/>.
+.TH ZWC 5 2023-05-17 "ZWC v0.0.1" "ZWC File Format Manual"
+.SH NAME
+zwc \- format of ZWC files
+.SH DESCRIPTION
+This is a reproduction of
+the ZWC File Format Specification Version 0.6
+in man page format.
+Should any differences arise between
+this and the specification found on the ZWC project page,
+the specification on the project page should take precedence.
+.PP
+The ZWC format describes how data should be encoded as zero-width characters.
+This encoded data is then put inside a message of non-zero-width characters.
+The result is a text stream with a visible message but hidden data.
+.SS Data Encoding
+.TS
+c s s s
+n l l l.
+\fBData Encoding Table\fR
+data	unicode	description	utf-8
+_
+delim	U+034F	combining grapheme joiner	0xCD 8F
+0	U+202C	pop directional formatting	0xE2 80 AC
+1	U+200C	zero width non-joiner	0xE2 80 8C
+2	U+200D	zero-width joiner	0xE2 80 8D
+3	U+2060	word-joiner	0xE2 81 A0
+_
+4	U+2061	function application	0xE2 81 A1
+5	U+2062	invisible times	0xE2 81 A2
+6	U+2063	invisible separator	0xE2 81 A3
+7	U+2064	invisible plus	0xE2 81 A4
+_
+8	U+206A	inhibit symmetric swapping	0xE2 81 AA
+9	U+206B	activate symmetric swapping	0xE2 81 AB
+10	U+206C	inhibit arabic form shaping	0xE2 81 AC
+11	U+206D	activate arabic form shaping	0xE2 81 AD
+12	U+206E	national digit shapes	0xE2 81 AE
+13	U+206F	nominal digit shapes	0xE2 81 AF
+14	U+1D173	musical symbol begin beam	0xF0 9D 85 B3
+15	U+1D174	musical symbol end beam	0xF0 9D 85 B4
+.TE
+.TP
+.B 2-bit encoding
+Each character encodes two bits of data.
+There is also a delimiter character to
+delimit the header, payload, and checksum from each other.
+Bytes of data are split into four and encoded with
+the most significant bits first.
+.br
+E.g. 0b10110100 -> 2 3 1 0 -> U+200D U+2060 U+200C U+202C.
+.TP
+.B 3-bit encoding
+Superset of 2-bit encoding.
+Each character encodes three bits of data.
+The process is the same as the two bit encoding but
+now bytes are split into three.
+.br
+E.g. 0b10110100 -> 2 6 4 -> U+200D U+2063 U+2061.
+.TP
+.B 4-bit encoding
+Superset of 2-bit encoding.
+Each character encodes four bits of data.
+Bytes are split into two.
+.br
+E.g. 0b10110100 -> 11 4 -> U+206D U+2061.
+.SS Layout
+\fBfile sig\fR | \fIheader\fR | \fBdelim\fR | \fIpayload\fR | \fBdelim\fR | \fIchecksum\fR
+.PP
+The encoded data is interspersed among a message with non-zero-width characters.
+When decoding, any characters not in the data encoding table for the selected
+encoding type are ignored. The message must not contain any of the zero-width
+characters used to encode the data. There may be multiple files within the same
+message.
+.SS File signature
+delim (U+034F)
+.SS Header
+The header uses 2 bit encoding
+regardless of what encoding is used for the payload and checksum.
+The header appears after the file signature and
+is 10 bits long.
+.TS
+l n n l.
+Field Name	Offset	Length	Description
+_
+version	0	2	major version of zwc file format
+encoding	2	2	encoding used for the payload
+checksum	4	3	checksum used for the payload
+crc-3-gsm	7	3	crc used to protect the header
+.TE
+.PP
+Below are the possible configurations:
+.TS
+c c
+r n.
+version	value
+_
+v1	0
+v2	1
+v3	2
+v4	3
+.TE
+.TS
+c c
+r n.
+encoding	value
+_
+2 bit	0
+3 bit	1
+4 bit	2
+.TE
+.TS
+c c
+r n.
+checksum	value
+_
+none	0
+crc-8	1
+crc-16	2
+crc-32	3
+crc-64	4
+md5	5
+sha-256	6
+Reed-Solomon ECC	7
+.TE
+.PP
+E.g. to set the file format as version 2,
+the encoding as 4 bit and
+the checksum as crc-32,
+the header would be 0b01\_10\_011_(crc-3-gsm).
+.SS Payload
+The actual data being hidden by the user is encoded in the payload.
+Each byte will require 4 to 2 zero-width characters to encode it,
+depending on the specified encoding.
+The payload is separated from the header and checksum by the delim character.
+
+If Reed-Solomon ECC is specified,
+the data is encoded with ECC before being converted to zero-width characters.
+.SS Checksum
+This section contains the encoded checksum and
+must not end with a delim character.
+The checksum uses the same encoding as the payload.
+.SH AUTHOR
+This program and accompanying manuals were written by Ethan Cheng <ethanrc0528@gmail.com>
+.SH REPORTING BUGS
+Report bugs to <https://github.com/yadayadajaychan/zwc/issues>
+.SH COPYRIGHT
+Copyright (C) 2023 Ethan Cheng
+.br
+License GPLv3: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+.br
+There is NO WARRANTY, to the extent permitted by law.
+.SH SEE ALSO
+\fBzwc\fR(1)
+.PP
+Project page: <https://github.com/yadayadajaychan/zwc>
