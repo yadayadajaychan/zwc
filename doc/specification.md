@@ -123,7 +123,8 @@ converted to zero-width characters.
 
 ## Checksum
 
-This section contains the encoded checksum and must not end with a delim character.
+This section contains the encoded checksum and must not end with a delim
+character. The checksum uses the same encoding as the payload.
 
 # Copyright Information
 
