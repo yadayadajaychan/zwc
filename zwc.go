@@ -28,12 +28,12 @@ type Encoding struct {
 	delimCharacter rune
 	version        int
 	encodingType   int
-	checksum       int
+	checksumType   int
 	encodeMap      [256]string
 	decodeMap      map[rune]byte
 }
 
-func NewEncodingSimple(version, encodingType, checksum int) *Encoding {
+func NewEncodingSimple(version, encodingType, checksumType int) *Encoding {
 	switch version {
 	case 1:
 		table := [16]string{
@@ -55,13 +55,13 @@ func NewEncodingSimple(version, encodingType, checksum int) *Encoding {
 			"\xF0\x9D\x85\xB4", // 15
 		}
 		delimCharacter := '\u034F'
-		return NewEncoding(table, delimCharacter, version, encodingtype, checksum)
+		return NewEncoding(table, delimCharacter, version, encodingtype, checksumType)
 	default:
 		panic("invalid encoding version number")
 	}
 }
 
-func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, checksum int) *Encoding {
+func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, checksumType int) *Encoding {
 	// sanity checks
 	if version != 1 {
 		panic("only ZWC file format version 1 is supported")
@@ -69,8 +69,8 @@ func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, c
 	if !(2 <= encodingType && encodingType <= 4) {
 		panic("encodingType must be either 2, 3, or 4")
 	}
-	if !(0 <= checksum && checksum <= 32 && checksum%8 == 0) {
-		panic("checksum must be either 0, 8, 16, or 32")
+	if !(0 <= checksumType && checksumType <= 32 && checksumType%8 == 0) {
+		panic("checksumType must be either 0, 8, 16, or 32")
 	}
 
 	//generate lookup table for encoding
@@ -100,7 +100,7 @@ func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, c
 		delimCharacter,
 		version,
 		encodingType,
-		checksum,
+		checksumType,
 		encodeMap,
 		decodeMap,
 	}
@@ -118,15 +118,15 @@ func (enc *Encoding) EncodeHeader() string {
 		// v1 corresponds to a value of 0
 		// so no need to set upper 2 bits
 
-		header = header | (enc.encoding-2) << 4
+		header = header | (enc.encodingType-2) << 4
 
-		switch enc.checksum {
+		switch enc.checksumType {
 		case 0, 8, 16:
-			checksum := enc.checksum / 8
+			checksumType := enc.checksumType / 8
 		case 32:
-			checksum := 3
+			checksumType := 3
 		}
-		header = header | checksum << 2
+		header = header | checksumType << 2
 
 		// TODO: calculate crc-2 to protect the header
 
@@ -178,13 +178,13 @@ func (enc *Encoding) EncodedChecksumMaxLen() int {
 	case 1:
 		switch enc.encodingType {
 		case 2:
-			return enc.checksum / 8 * 12 // each byte takes 4 characters to encode
+			return enc.checksumType / 8 * 12 // each byte takes 4 characters to encode
 			                             // each character is 3 bytes long
 		case 3:
-			return enc.checksum / 8 * 9  // each byte take 3 characters to encode
+			return enc.checksumType / 8 * 9  // each byte take 3 characters to encode
 			                             // each character is 3 bytes long
 		case 4:
-			return enc.checksum / 8 * 8  // each byte takes 2 characters to encode
+			return enc.checksumType / 8 * 8  // each byte takes 2 characters to encode
 			                             // each character can be up to 4 bytes long
 		}
 	}
