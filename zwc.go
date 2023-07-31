@@ -20,6 +20,7 @@ package zwc
 import (
 	"io"
 	"os"
+	"unicode/utf8"
 )
 
 type Encoding struct {
@@ -62,8 +63,8 @@ func NewEncodingSimple(version, encodingType, checksum int) *Encoding {
 
 func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, checksum int) *Encoding {
 	// sanity checks
-	if !(1 <= version && version <= 4) {
-		panic("version must be either 1, 2, 3, or 4")
+	if version != 1 {
+		panic("only ZWC file format version 1 is supported")
 	}
 	if !(2 <= encodingType && encodingType <= 4) {
 		panic("encodingType must be either 2, 3, or 4")
@@ -87,8 +88,11 @@ func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, c
 
 	// generate map for decoding
 	var decodeMap map[rune]byte
-	for i, v := range table {
-		decodeMap[v] = i
+	for i := 0; i < 1<<encodingType; i++ {
+		if char := utf8.DecodeRuneInString(table[i]); char == utf8.RuneError {
+			panic("Invalid utf8 in encode table")
+		}
+		decodeMap[char] = i
 	}
 
 	return &Encoding{
