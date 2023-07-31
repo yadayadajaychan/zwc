@@ -23,7 +23,7 @@ import (
 )
 
 type Encoding struct {
-	encode [16]rune
+	encode [16]string
 	delimCharacter rune
 	encodingType int
 	checksum int
@@ -35,23 +35,23 @@ type Encoding struct {
 func NewEncodingSimple(version, encodingType, checksum int) *Encoding {
 	switch version {
 	case 1:
-		table := [16]rune{
-			'\u202C', //  0
-			'\u200C', //  1
-			'\u200D', //  2
-			'\u2060', //  3
-			'\u2061', //  4
-			'\u2062', //  5
-			'\u2063', //  6
-			'\u2064', //  7
-			'\u206A', //  8
-			'\u206B', //  9
-			'\u206C', // 10
-			'\u206D', // 11
-			'\u206E', // 12
-			'\u206F', // 13
-			'\u200E', // 14
-			'\u202A', // 15
+		table := [16]string{
+			"\xE2\x80\xAC",     //  0
+			"\xE2\x80\x8C",     //  1
+			"\xE2\x80\x8D",     //  2
+			"\xE2\x81\xA0",     //  3
+			"\xE2\x81\xA1",     //  4
+			"\xE2\x81\xA2",     //  5
+			"\xE2\x81\xA3",     //  6
+			"\xE2\x81\xA4",     //  7
+			"\xE2\x81\xAA",     //  8
+			"\xE2\x81\xAB",     //  9
+			"\xE2\x81\xAC",     // 10
+			"\xE2\x81\xAD",     // 11
+			"\xE2\x81\xAE",     // 12
+			"\xE2\x81\xAF",     // 13
+			"\xF0\x9D\x85\xB3", // 14
+			"\xF0\x9D\x85\xB4", // 15
 		}
 		delimCharacter := '\u034F'
 		return NewEncoding(table, delimCharacter, encodingtype, checksum)
@@ -60,7 +60,7 @@ func NewEncodingSimple(version, encodingType, checksum int) *Encoding {
 	}
 }
 
-func NewEncoding(table [16]rune, delimCharacter rune, encodingType, checksum int) *Encoding {
+func NewEncoding(table [16]string, delimCharacter rune, encodingType, checksum int) *Encoding {
 	// sanity checks
 	if !(2 <= encodingType && encodingType <= 4) {
 		panic("encodingType must be either 2, 3, or 4")
