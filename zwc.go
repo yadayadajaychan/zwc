@@ -23,13 +23,13 @@ import (
 )
 
 type Encoding struct {
-	encode [16]string
+	encode         [16]string
 	delimCharacter rune
-	encodingType int
-	checksum int
-
-	encodeMap [256]string
-	decodeMap map[rune]byte
+	version        int
+	encodingType   int
+	checksum       int
+	encodeMap      [256]string
+	decodeMap      map[rune]byte
 }
 
 func NewEncodingSimple(version, encodingType, checksum int) *Encoding {
@@ -54,19 +54,22 @@ func NewEncodingSimple(version, encodingType, checksum int) *Encoding {
 			"\xF0\x9D\x85\xB4", // 15
 		}
 		delimCharacter := '\u034F'
-		return NewEncoding(table, delimCharacter, encodingtype, checksum)
+		return NewEncoding(table, delimCharacter, version, encodingtype, checksum)
 	default:
 		panic("invalid encoding version number")
 	}
 }
 
-func NewEncoding(table [16]string, delimCharacter rune, encodingType, checksum int) *Encoding {
+func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, checksum int) *Encoding {
 	// sanity checks
+	if !(1 <= version && version <= 4) {
+		panic("version must be either 1, 2, 3, or 4")
+	}
 	if !(2 <= encodingType && encodingType <= 4) {
 		panic("encodingType must be either 2, 3, or 4")
 	}
-	if !(0 <= checksum && checksum <= 7) {
-		panic("checksum must be between 0 and 7 inclusive")
+	if !(0 <= checksum && checksum <= 32 && checksum%8 == 0) {
+		panic("checksum must be either 0, 8, 16, or 32")
 	}
 
 	//generate lookup table for encoding
@@ -88,16 +91,16 @@ func NewEncoding(table [16]string, delimCharacter rune, encodingType, checksum i
 		decodeMap[v] = i
 	}
 
-	encoding := &Encoding{
+	return &Encoding{
 		table,
 		delimCharacter,
+		version,
 		encodingType,
 		checksum,
 		encodeMap,
 		decodeMap,
 	}
 
-	return encoding
 }
 
 //func NewEncoder(enc *Encoding, w io.Writer) io.WriteCloser
