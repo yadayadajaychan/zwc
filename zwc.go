@@ -110,24 +110,62 @@ func (enc *Encoding) Encode(dst, src []byte) {
 
 }
 
+func (enc *Encoding) EncodeHeader() string {
+	switch enc.version {
+	case 1:
+		var header byte
+
+		// v1 corresponds to a value of 0
+		// so no need to set upper 2 bits
+
+		header = header | (enc.encoding-2) << 4
+
+		switch enc.checksum {
+		case 0, 8, 16:
+			checksum := enc.checksum / 8
+		case 32:
+			checksum := 3
+		}
+		header = header | checksum << 2
+
+		// TODO: calculate crc-2 to protect the header
+
+		return enc.encodeMap[header]
+	}
+}
+
 // EncodedLen returns the maximum length in bytes of
 // the encoded ZWC file
 func (enc *Encoding) EncodedMaxLen(n int) int {
-
+	const delimLen = 6 // there are 3 delim chars and each are 2 bytes long
+	return delimLen + EncodedHeaderLen() + EncodedPayloadMaxLen(n) + EncodedChecksumMaxLen()
 }
 
 // EncodedPayloadLen returns the maximum length in bytes of
 // the encoded ZWC payload
 func (enc *Encoding) EncodedPayloadMaxLen(n int) int {
-
+	switch enc.version {
+	case 1:
+		switch enc.encodingType {
+		case 2:
+			return n * 12 // each byte takes 4 characters to encode
+			              // each character is 3 bytes long
+		case 3:
+			return n * 9  // each byte take 3 characters to encode
+			              // each character is 3 bytes long
+		case 4:
+			return n * 8  // each byte takes 2 characters to encode
+			              // each character can be up to 4 bytes long
+		}
+	}
 }
 
 // EncodedHeaderLen returns the length in bytes of
 // the encoded ZWC header
-func (enc *Encoding) EncodedHeaderLen(n int) int {
+func (enc *Encoding) EncodedHeaderLen() int {
 	switch enc.version {
 	case 1:
-		return 12
+		return 12 // header always uses 2-bit encoding
 	default:
 		return nil
 	}
@@ -135,8 +173,21 @@ func (enc *Encoding) EncodedHeaderLen(n int) int {
 
 // EncodedChecksumLen returns the maximum length in bytes of
 // the encoded ZWC checksum
-func (enc *Encoding) EncodedChecksumMaxLen(n int) int {
-
+func (enc *Encoding) EncodedChecksumMaxLen() int {
+	switch enc.version {
+	case 1:
+		switch enc.encodingType {
+		case 2:
+			return enc.checksum / 8 * 12 // each byte takes 4 characters to encode
+			                             // each character is 3 bytes long
+		case 3:
+			return enc.checksum / 8 * 9  // each byte take 3 characters to encode
+			                             // each character is 3 bytes long
+		case 4:
+			return enc.checksum / 8 * 8  // each byte takes 2 characters to encode
+			                             // each character can be up to 4 bytes long
+		}
+	}
 }
 
 type encoder struct {
