@@ -18,8 +18,8 @@
 package zwc
 
 import (
-	"os"
 	"io"
+	"os"
 )
 
 type Encoding struct {
@@ -79,7 +79,7 @@ func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, c
 		var output string
 
 		for j := 0; j < 8; j += encodingType {
-			output = table[(i>>j) & (1<<encodingType - 1)] + output
+			output = table[(i>>j)&(1<<encodingType-1)] + output
 		}
 
 		encodeMap[i] = output
@@ -100,9 +100,58 @@ func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, c
 		encodeMap,
 		decodeMap,
 	}
+}
+
+func (enc *Encoding) Encode(dst, src []byte) {
 
 }
 
-//func NewEncoder(enc *Encoding, w io.Writer) io.WriteCloser
-//
+// EncodedLen returns the maximum length in bytes of
+// the encoded ZWC file
+func (enc *Encoding) EncodedMaxLen(n int) int {
+
+}
+
+// EncodedPayloadLen returns the maximum length in bytes of
+// the encoded ZWC payload
+func (enc *Encoding) EncodedPayloadMaxLen(n int) int {
+
+}
+
+// EncodedHeaderLen returns the length in bytes of
+// the encoded ZWC header
+func (enc *Encoding) EncodedHeaderLen(n int) int {
+	switch enc.version {
+	case 1:
+		return 12
+	default:
+		return nil
+	}
+}
+
+// EncodedChecksumLen returns the maximum length in bytes of
+// the encoded ZWC checksum
+func (enc *Encoding) EncodedChecksumMaxLen(n int) int {
+
+}
+
+type encoder struct {
+	err  error
+	enc  *Encoding
+	w    io.Writer
+	buf  [3]byte
+	nbuf int
+	out  [1024]byte
+}
+
+func NewEncoder(enc *Encoding, w io.Writer) io.WriteCloser {
+	return &encoder{enc: enc, w: w}
+}
+
+func (e *encoder) Write(p []byte) (n int, err error) {
+}
+
+func (e *encoder) Close() error {
+}
+
 //func NewDecoder(enc *Encoding, r io.Reader) io.Reader
