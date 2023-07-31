@@ -1,4 +1,4 @@
-# ZWC File Format Specification Version 0.6 (Draft)
+# ZWC File Format Specification Version 0.7 (Draft)
 
 The ZWC format describes how data should be encoded as zero-width characters.
 This encoded data is then put inside a message of non-zero-width characters.
@@ -6,7 +6,7 @@ The result is a text stream with a visible message but hidden data.
 
 ## Data encoding
 
-### 2 bit encoding
+### 2-bit encoding
 
 | data  | unicode |        description         |   utf-8    |
 |-------|---------|----------------------------|------------|
@@ -21,7 +21,7 @@ to delimit the header, payload, and checksum from each other. Bytes of data are
 split into four and encoded with the most significant bits first.  
 E.g. 0b10110100 -> 2 3 1 0 -> U+200D U+2060 U+200C U+202C.
 
-### 3 bit encoding
+### 3-bit encoding
 
 Extension of the 2 bit encoding.
 
@@ -36,7 +36,7 @@ Each character encodes three bits of data. The process is the same as the two
 bit encoding but now bytes are split into three.  
 E.g. 0b10110100 -> 2 6 4 -> U+200D U+2063 U+2061.
 
-### 4 bit encoding
+### 4-bit encoding
 
 Extension of 3 bit encoding.
 
@@ -71,16 +71,16 @@ delim (U+034F)
 
 ## Header
 
-The header uses 2 bit encoding regardless of what encoding is used for the
-payload and checksum. The header appears after the file signature and is 10 bits
+The header uses 2-bit encoding regardless of what encoding is used for the
+payload and checksum. The header appears after the file signature and is 8 bits
 long.
 
 | Field Name | Offset (bits) | Length (bits) |           Description            |
 |------------|---------------|---------------|----------------------------------|
 | version    |             0 |             2 | major version of zwc file format |
 | encoding   |             2 |             2 | encoding used for the payload    |
-| checksum   |             4 |             3 | checksum used for the payload    |
-| crc-3-gsm  |             7 |             3 | crc used to protect the header   |
+| checksum   |             4 |             2 | checksum used for the payload    |
+| crc-2      |             6 |             2 | crc used to protect the header   |
 
 Below are the possible configurations:
 
@@ -93,9 +93,9 @@ Below are the possible configurations:
 
 | encoding | value |
 |----------|-------|
-| 2 bit    |     0 |
-| 3 bit    |     1 |
-| 4 bit    |     2 |
+| 2-bit    |     0 |
+| 3-bit    |     1 |
+| 4-bit    |     2 |
 
 |     checksum     | value |
 |------------------|-------|
@@ -103,13 +103,9 @@ Below are the possible configurations:
 | crc-8            |     1 |
 | crc-16           |     2 |
 | crc-32           |     3 |
-| crc-64           |     4 |
-| md5              |     5 |
-| sha-256          |     6 |
-| Reed-Solomon ECC |     7 |
 
-E.g. to set the file format as version 2, the encoding as 4 bit and the checksum
-as crc-32, the header would be 0b01\_10\_011_(crc-3-gsm).
+E.g. to set the file format as version 2, the encoding as 4-bit and the checksum
+as crc-32, the header would be 0b01\_10\_11_(crc-2).
 
 ## Payload
 
@@ -117,9 +113,6 @@ The actual data being hidden by the user is encoded in the payload. Each byte
 will require 4 to 2 zero-width characters to encode it, depending on the
 specified encoding. The payload is separated from the header and checksum by
 the delim character.
-
-If Reed-Solomon ECC is specified, the data is encoded with ECC before being
-converted to zero-width characters.
 
 ## Checksum
 

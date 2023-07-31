@@ -92,24 +92,25 @@ message.
 .SS File signature
 delim (U+034F)
 .SS Header
-The header uses 2 bit encoding
+The header uses 2-bit encoding
 regardless of what encoding is used for the payload and checksum.
 The header appears after the file signature and
-is 10 bits long.
+is 8 bits long.
 .TS
 l n n l.
 Field Name	Offset	Length	Description
 _
 version	0	2	major version of zwc file format
 encoding	2	2	encoding used for the payload
-checksum	4	3	checksum used for the payload
-crc-3-gsm	7	3	crc used to protect the header
+checksum	4	2	checksum used for the payload
+crc-2	6	2	crc used to protect the header
 .TE
 .PP
 Below are the possible configurations:
+
 .TS
 c c
-r n.
+c n.
 version	value
 _
 v1	0
@@ -117,42 +118,37 @@ v2	1
 v3	2
 v4	3
 .TE
+
 .TS
 c c
-r n.
+c n.
 encoding	value
 _
-2 bit	0
-3 bit	1
-4 bit	2
+2-bit	0
+3-bit	1
+4-bit	2
 .TE
+
 .TS
 c c
-r n.
+c n.
 checksum	value
 _
 none	0
 crc-8	1
 crc-16	2
 crc-32	3
-crc-64	4
-md5	5
-sha-256	6
-Reed-Solomon ECC	7
 .TE
 .PP
 E.g. to set the file format as version 2,
-the encoding as 4 bit and
+the encoding as 4-bit and
 the checksum as crc-32,
-the header would be 0b01\_10\_011_(crc-3-gsm).
+the header would be 0b01\_10\_11_(crc-2).
 .SS Payload
 The actual data being hidden by the user is encoded in the payload.
 Each byte will require 4 to 2 zero-width characters to encode it,
 depending on the specified encoding.
 The payload is separated from the header and checksum by the delim character.
-
-If Reed-Solomon ECC is specified,
-the data is encoded with ECC before being converted to zero-width characters.
 .SS Checksum
 This section contains the encoded checksum and
 must not end with a delim character.

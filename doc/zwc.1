@@ -14,7 +14,7 @@
 .\"
 .\" You should have received a copy of the GNU General Public License along
 .\" with ZWC. If not, see <https://www.gnu.org/licenses/>.
-.TH ZWC 1 2023-05-15 "ZWC v0.0.1" "ZWC Manual"
+.TH ZWC 1 2023-07-30 "ZWC v0.0.1" "ZWC Manual"
 .SH NAME
 zwc \- encodes/decodes data into zero-width characters
 .SH SYNOPSIS
@@ -38,7 +38,7 @@ Each subcommand can be abbreviated.
 For example, \fBe\fR, \fBen\fR, \fBenc\fR, etc.
 can be used to specify the \fBencode\fR subcommand.
 .SS encode\fR [\fB\-d\fR \fIdata\fR] [\fB\-m\fR \fImessage\fR] \
-[\fB\-inr\fR] [\fB\-c\fR \fIchecksum\fR] [\fB\-e\fR \fIencoding\fR]
+[\fB\-in\fR] [\fB\-c\fR \fIchecksum\fR] [\fB\-e\fR \fIencoding\fR]
 \fBzwc\fR takes \fIdata\fR,
 encodes it into zero-width characters,
 and inserts it into \fImessage\fR.
@@ -70,15 +70,11 @@ Do not intersperse the encoded data within a message.
 .TP
 \fB\-c\fR \fIchecksum\fR
 Specifies the checksum to use when encoding the message.
-Valid arguments are: none, crc8, crc16, crc32, crc64, md5, sha256.
-.TP
-\fB\-r\fR
-Use Reed-Solomon error correction.
-When this flag is used, checksum is restricted to "none".
+Valid arguments are: none, 8 (for crc8), 16 (for crc16), and 32 (for crc32)
 .TP
 \fB\-e\fR \fIencoding\fR
 Choose which encoding for the data to use. Valid arguments are: 2, 3, 4.
-.SS decode\fR [\fB\-t\fR \fItext\fR] [\fB\-mc\fR] [\fB\-f\fR \fIencoding\fR]...
+.SS decode\fR [\fB\-t\fR \fItext\fR] [\fB\-mc\fR] [\fB\-f\fR \fIencoding\fR]
 \fBzwc\fR takes \fItext\fR,
 decodes the hidden data,
 and sends that data to standard output.
@@ -98,12 +94,9 @@ Output the checksum value in hexadecimal instead of the data.
 \fB\-f\fR \fIencoding\fR
 Force \fBzwc\fR to interpret the encoding of the data as \fIencoding\fR,
 even if the header says otherwise.
-Valid values for \fIencoding\fR are: 2, 3, 4, rs.
-.SS test\fR [\fB\-t\fR \fItext\fR] [\fB\-f\fR \fIencoding\fR]...
+Valid values for \fIencoding\fR are: 2, 3, 4.
+.SS test\fR [\fB\-t\fR \fItext\fR]
 Used to test the integrity of \fItext\fR.
-Shares the same options and behavior as the "decode" subcommand but
-doesn't output anything to stdout.
-The \fB\-m\fR and \fB\-c\fR options have no effect.
 .SS help\fR [\fIsubcommand\fR]
 Display help information and subcommand usage.
 .SS version
