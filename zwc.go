@@ -110,15 +110,15 @@ func (enc *Encoding) Encode(dst, src []byte) {
 
 }
 
-func (enc *Encoding) EncodeHeader() string {
+func (enc *Encoding) EncodeHeader() []byte {
 	switch enc.version {
 	case 1:
-		var header byte
+		header := make([]byte, 0, EncodedHeaderLen())
 
 		// v1 corresponds to a value of 0
-		// so no need to set upper 2 bits
+		header := append(header, enc.encode[0]...)
 
-		header = header | (enc.encodingType-2) << 4
+		header := append(header, enc.encode[enc.encodingType-2]...)
 
 		switch enc.checksumType {
 		case 0, 8, 16:
@@ -126,11 +126,20 @@ func (enc *Encoding) EncodeHeader() string {
 		case 32:
 			checksumType := 3
 		}
-		header = header | checksumType << 2
+		header := append(header, enc.encode[checksumType]...)
 
 		// TODO: calculate crc-2 to protect the header
 
-		return enc.encodeMap[header]
+		return header
+	}
+}
+
+func (enc *Encoding) EncodePayload(dst, src []byte) {
+	switch enc.version {
+	case 1:
+		switch enc.encodingType {
+		case 2:
+		}
 	}
 }
 
