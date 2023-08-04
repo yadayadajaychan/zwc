@@ -87,7 +87,7 @@ func NewEncoding(table [16]string, delimChar rune, version, encodingType, checks
 	}
 
 	// generate map for decoding
-	var decodeMap map[rune]byte
+	decodeMap := make(map[rune]byte, 16)
 	for i := 0; i < 1<<encodingType; i++ {
 		char, _ := utf8.DecodeRuneInString(table[i])
 		if char == utf8.RuneError {
