@@ -21,11 +21,12 @@ import (
 	"io"
 	//"os"
 	"unicode/utf8"
+	//"github.com/snksoft/crc"
 )
 
 type Encoding struct {
 	encode         [16]string
-	delimChar rune
+	delimChar      rune
 	version        int
 	encodingType   int
 	checksumType   int
@@ -150,6 +151,33 @@ func (enc *Encoding) EncodeHeader(dst []byte) int {
 	}
 
 	return 0
+}
+
+// Crc2 takes a message that's 6 bits long
+// with 2 0-bits appended to it
+// and returns the 2-bit crc
+func Crc2(message byte) byte {
+	var crc [2]byte // crc register
+	var xor bool
+
+	for i := 7; i >= 0; i-- {
+		if crc[0] == 1 {
+			xor = true
+		} else {
+			xor = false
+		}
+
+		// shift the register left
+		crc[0] = crc[1]
+		crc[1] = message >> i & 1
+
+		if xor {
+			crc[0] = crc[0] ^ 1
+			crc[1] = crc[1] ^ 1
+		}
+	}
+
+	return crc[0] << 1 | crc[1]
 }
 
 func (enc *Encoding) EncodePayload(dst, src []byte) int {

@@ -101,3 +101,12 @@ func TestEncodePayload(t *testing.T) {
 	}
 }
 
+func TestCrc2(t *testing.T) {
+	if crc := zwc.Crc2(0xc0); crc != 3 {
+		t.Errorf("Expected %v, got %v", 3, crc)
+	}
+
+	if crc := zwc.Crc2(0xc3); crc != 0 {
+		t.Errorf("Expected %v, got %v", 0, crc)
+	}
+}
