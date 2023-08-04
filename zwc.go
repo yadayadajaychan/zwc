@@ -144,8 +144,8 @@ func (enc *Encoding) EncodeHeader(dst []byte) int {
 		}
 		di += copy(dst[di:], enc.encode[checksumType])
 
-		// TODO: calculate crc-2 to protect the header
-		di += copy(dst[di:], enc.encode[0])
+		crc := Crc2(byte(0<<6 + (enc.encodingType-2)<<4 + checksumType<<2))
+		di += copy(dst[di:], enc.encode[crc])
 
 		return di
 	}
