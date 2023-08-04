@@ -16,12 +16,12 @@
 .\"
 .\" You should have received a copy of the GNU General Public License along
 .\" with ZWC. If not, see <https://www.gnu.org/licenses/>.
-.TH ZWC 5 2023-05-17 "ZWC v0.0.1" "ZWC File Format Manual"
+.TH ZWC 5 2023-08-04 "ZWC v0.0.1" "ZWC File Format Manual"
 .SH NAME
 zwc \- format of ZWC files
 .SH DESCRIPTION
 This is a reproduction of
-the ZWC File Format Specification Version 0.6
+the ZWC File Format Specification Version 0.8
 in man page format.
 Should any differences arise between
 this and the specification found on the ZWC project page,
@@ -144,6 +144,19 @@ E.g. to set the file format as version 2,
 the encoding as 4-bit and
 the checksum as crc-32,
 the header would be 0b01\_10\_11_(crc-2).
+.TP
+.B CRC-2
+WIDTH: 2
+.br
+POLY: 0x03
+.br
+INIT: 0x00
+.br
+REFIN: FALSE
+.br
+REFOUT: FALSE
+.br
+XOROUT: 0x00
 .SS Payload
 The actual data being hidden by the user is encoded in the payload.
 Each byte will require 4 to 2 zero-width characters to encode it,

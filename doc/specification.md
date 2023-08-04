@@ -1,4 +1,4 @@
-# ZWC File Format Specification Version 0.7 (Draft)
+# ZWC File Format Specification Version 0.8 (Draft)
 
 The ZWC format describes how data should be encoded as zero-width characters.
 This encoded data is then put inside a message of non-zero-width characters.
@@ -106,6 +106,15 @@ Below are the possible configurations:
 
 E.g. to set the file format as version 2, the encoding as 4-bit and the checksum
 as crc-32, the header would be 0b01\_10\_11_(crc-2).
+
+### CRC-2
+
+WIDTH: 2  
+POLY: 0x03  
+INIT: 0x00  
+REFIN: FALSE  
+REFOUT: FALSE  
+XOROUT: 0x00
 
 ## Payload
 
