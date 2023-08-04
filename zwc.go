@@ -19,13 +19,13 @@ package zwc
 
 import (
 	"io"
-	"os"
+	//"os"
 	"unicode/utf8"
 )
 
 type Encoding struct {
 	encode         [16]string
-	delimCharacter rune
+	delimChar rune
 	version        int
 	encodingType   int
 	checksumType   int
@@ -54,14 +54,14 @@ func NewEncodingSimple(version, encodingType, checksumType int) *Encoding {
 			"\xF0\x9D\x85\xB3", // 14
 			"\xF0\x9D\x85\xB4", // 15
 		}
-		delimCharacter := '\u034F'
-		return NewEncoding(table, delimCharacter, version, encodingtype, checksumType)
+		delimChar := '\u034F'
+		return NewEncoding(table, delimChar, version, encodingType, checksumType)
 	default:
-		panic("invalid encoding version number")
+		panic("only ZWC file format version 1 is supported")
 	}
 }
 
-func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, checksumType int) *Encoding {
+func NewEncoding(table [16]string, delimChar rune, version, encodingType, checksumType int) *Encoding {
 	// sanity checks
 	if version != 1 {
 		panic("only ZWC file format version 1 is supported")
@@ -89,15 +89,16 @@ func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, c
 	// generate map for decoding
 	var decodeMap map[rune]byte
 	for i := 0; i < 1<<encodingType; i++ {
-		if char := utf8.DecodeRuneInString(table[i]); char == utf8.RuneError {
+		char, _ := utf8.DecodeRuneInString(table[i])
+		if char == utf8.RuneError {
 			panic("Invalid utf8 in encode table")
 		}
-		decodeMap[char] = i
+		decodeMap[char] = byte(i)
 	}
 
 	return &Encoding{
 		table,
-		delimCharacter,
+		delimChar,
 		version,
 		encodingType,
 		checksumType,
@@ -106,48 +107,78 @@ func NewEncoding(table [16]string, delimCharacter rune, version, encodingType, c
 	}
 }
 
-func (enc *Encoding) Encode(dst, src []byte) {
-
-}
-
-func (enc *Encoding) EncodeHeader() []byte {
+func (enc *Encoding) Encode(dst, src []byte) int {
 	switch enc.version {
 	case 1:
-		header := make([]byte, 0, EncodedHeaderLen())
+		di := 0
+		di += utf8.EncodeRune(dst[di:], enc.delimChar)
+		di += enc.EncodeHeader(dst[di:])
+		di += utf8.EncodeRune(dst[di:], enc.delimChar)
+
+		di += enc.EncodePayload(dst[di:], src)
+		di += utf8.EncodeRune(dst[di:], enc.delimChar)
+		di += enc.EncodeChecksum(dst[di:])
+		return di
+	}
+
+	return 0
+}
+
+func (enc *Encoding) EncodeHeader(dst []byte) int {
+	switch enc.version {
+	case 1:
+		di := 0
 
 		// v1 corresponds to a value of 0
-		header := append(header, enc.encode[0]...)
+		di += copy(dst[di:], enc.encode[0])
 
-		header := append(header, enc.encode[enc.encodingType-2]...)
+		di += copy(dst[di:], enc.encode[enc.encodingType-2])
 
+		var checksumType int
 		switch enc.checksumType {
 		case 0, 8, 16:
-			checksumType := enc.checksumType / 8
+			checksumType = enc.checksumType / 8
 		case 32:
-			checksumType := 3
+			checksumType = 3
 		}
-		header := append(header, enc.encode[checksumType]...)
+		di += copy(dst[di:], enc.encode[checksumType])
 
 		// TODO: calculate crc-2 to protect the header
+		di += copy(dst[di:], enc.encode[0])
 
-		return header
+		return di
 	}
+
+	return 0
 }
 
-func (enc *Encoding) EncodePayload(dst, src []byte) {
-	switch enc.version {
-	case 1:
-		switch enc.encodingType {
-		case 2:
-		}
+func (enc *Encoding) EncodePayload(dst, src []byte) int {
+	n := len(src)
+
+	if n == 0 {
+		return 0
 	}
+
+	// TODO: calculate checksum while encoding payload
+
+	si, di := 0, 0
+	for si < n {
+		di += copy(dst[di:], enc.encodeMap[src[si]])
+		si += 1
+	}
+
+	return di
+}
+
+func (enc *Encoding) EncodeChecksum(dst []byte) int {
+	return 0
 }
 
 // EncodedLen returns the maximum length in bytes of
 // the encoded ZWC file
 func (enc *Encoding) EncodedMaxLen(n int) int {
 	const delimLen = 6 // there are 3 delim chars and each are 2 bytes long
-	return delimLen + EncodedHeaderLen() + EncodedPayloadMaxLen(n) + EncodedChecksumMaxLen()
+	return delimLen + enc.EncodedHeaderLen() + enc.EncodedPayloadMaxLen(n) + enc.EncodedChecksumMaxLen()
 }
 
 // EncodedPayloadLen returns the maximum length in bytes of
@@ -167,6 +198,8 @@ func (enc *Encoding) EncodedPayloadMaxLen(n int) int {
 			              // each character can be up to 4 bytes long
 		}
 	}
+
+	return 0
 }
 
 // EncodedHeaderLen returns the length in bytes of
@@ -175,9 +208,9 @@ func (enc *Encoding) EncodedHeaderLen() int {
 	switch enc.version {
 	case 1:
 		return 12 // header always uses 2-bit encoding
-	default:
-		return nil
 	}
+
+	return 0
 }
 
 // EncodedChecksumLen returns the maximum length in bytes of
@@ -197,6 +230,8 @@ func (enc *Encoding) EncodedChecksumMaxLen() int {
 			                             // each character can be up to 4 bytes long
 		}
 	}
+
+	return 0
 }
 
 type encoder struct {
@@ -213,9 +248,11 @@ func NewEncoder(enc *Encoding, w io.Writer) io.WriteCloser {
 }
 
 func (e *encoder) Write(p []byte) (n int, err error) {
+	return 0, nil
 }
 
 func (e *encoder) Close() error {
+	return nil
 }
 
 //func NewDecoder(enc *Encoding, r io.Reader) io.Reader
