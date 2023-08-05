@@ -13,15 +13,72 @@ func TestEncodeHeader(t *testing.T) {
 		checksumType	int
 		expected	string
 	}{
+		// v1, 2-bit, no cksum
 		{1, 2, 0, "\xE2\x80\xAC" +
 			  "\xE2\x80\xAC" +
 			  "\xE2\x80\xAC" +
 			  "\xE2\x80\xAC"},
+		// v1, 2-bit, crc-8
+		{1, 2, 8, "\xE2\x80\xAC" +
+			  "\xE2\x80\xAC" +
+			  "\xE2\x80\x8C" +
+			  "\xE2\x81\xA0"},
+		// v1, 2-bit, crc-16
+		{1, 2, 16, "\xE2\x80\xAC" +
+			   "\xE2\x80\xAC" +
+			   "\xE2\x80\x8D" +
+			   "\xE2\x80\x8C"},
+		// v1, 2-bit, crc-32
+		{1, 2, 32, "\xE2\x80\xAC" +
+			   "\xE2\x80\xAC" +
+			   "\xE2\x81\xA0" +
+			   "\xE2\x80\x8D"},
+
+		// v1, 3-bit, no cksum
+		{1, 3, 0, "\xE2\x80\xAC" +
+			  "\xE2\x80\x8C" +
+			  "\xE2\x80\xAC" +
+			  "\xE2\x80\x8D"},
+		// v1, 3-bit, crc-8
+		{1, 3, 8, "\xE2\x80\xAC" +
+			  "\xE2\x80\x8C" +
+			  "\xE2\x80\x8C" +
+			  "\xE2\x80\x8C"},
+		// v1, 3-bit, crc-16
+		{1, 3, 16, "\xE2\x80\xAC" +
+			   "\xE2\x80\x8C" +
+			   "\xE2\x80\x8D" +
+			   "\xE2\x81\xA0"},
+		// v1, 3-bit, crc-32
+		{1, 3, 32, "\xE2\x80\xAC" +
+			   "\xE2\x80\x8C" +
+			   "\xE2\x81\xA0" +
+			   "\xE2\x80\xAC"},
+
+		// v1, 4-bit, no cksum
+		{1, 4, 0, "\xE2\x80\xAC" +
+			  "\xE2\x80\x8D" +
+			  "\xE2\x80\xAC" +
+			  "\xE2\x81\xA0"},
+		// v1, 4-bit, crc-8
+		{1, 4, 8, "\xE2\x80\xAC" +
+			  "\xE2\x80\x8D" +
+			  "\xE2\x80\x8C" +
+			  "\xE2\x80\xAC"},
+		// v1, 4-bit, crc-16
+		{1, 4, 16, "\xE2\x80\xAC" +
+			   "\xE2\x80\x8D" +
+			   "\xE2\x80\x8D" +
+			   "\xE2\x80\x8D"},
+		// v1, 4-bit, crc-32
+		{1, 4, 32, "\xE2\x80\xAC" +
+			   "\xE2\x80\x8D" +
+			   "\xE2\x81\xA0" +
+			   "\xE2\x80\x8C"},
 	}
 
 	for _, tc := range testCases {
-		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType,
-								tc.checksumType)
+		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
 		dst := make([]byte, enc.EncodedHeaderLen())
 		n := enc.EncodeHeader(dst)
 
@@ -29,7 +86,7 @@ func TestEncodeHeader(t *testing.T) {
 			t.Errorf("Expected %v, got %v", len(tc.expected), n)
 		}
 		if string(dst) != tc.expected {
-			t.Errorf("Expected %v, got %v", tc.expected, string(dst))
+			t.Errorf("Expected %q, got %q", tc.expected, string(dst))
 		}
 	}
 }
@@ -133,11 +190,57 @@ func TestCrc2(t *testing.T) {
 		}
 	}
 
-	if crc := zwc.Crc2(0xc0); crc != 3 {
-		t.Errorf("Expected %v, got %v", 3, crc)
+	// manually verified test cases
+	testCases := []struct {
+		message  byte
+		expected byte
+	}{
+		{0xc0, 3}, // 1100 0000
+		{0xc3, 0}, // 1100 0011
+
+		// v1, 2-bit, no cksum
+		{0x00, 0}, // 0000 0000
+		{0x00, 0}, // 0000 0000
+		// v1, 2-bit, crc-8
+		{0x04, 3}, // 0000 0100
+		{0x07, 0}, // 0000 0111
+		// v1, 2-bit, crc-16
+		{0x08, 1}, // 0000 1000
+		{0x09, 0}, // 0000 1001
+		// v1, 2-bit, crc-32
+		{0x0c, 2}, // 0000 1100
+		{0x0e, 0}, // 0000 1110
+
+		// v1, 3-bit, no cksum
+		{0x10, 2}, // 0001 0000
+		{0x12, 0}, // 0001 0010
+		// v1, 3-bit, crc-8
+		{0x14, 1}, // 0001 0100
+		{0x15, 0}, // 0001 0101
+		// v1, 3-bit, crc-16
+		{0x18, 3}, // 0001 1000
+		{0x1b, 0}, // 0001 1011
+		// v1, 3-bit, crc-32
+		{0x1c, 0}, // 0001 1100
+		{0x1c, 0}, // 0001 1100
+
+		// v1, 4-bit, no cksum
+		{0x20, 3}, // 0010 0000
+		{0x23, 0}, // 0010 0011
+		// v1, 4-bit, crc-8
+		{0x24, 0}, // 0010 0100
+		{0x24, 0}, // 0010 0100
+		// v1, 4-bit, crc-16
+		{0x28, 2}, // 0010 1000
+		{0x2a, 0}, // 0010 1010
+		// v1, 4-bit, crc-32
+		{0x2c, 1}, // 0010 1100
+		{0x2d, 0}, // 0010 1101
 	}
 
-	if crc := zwc.Crc2(0xc3); crc != 0 {
-		t.Errorf("Expected %v, got %v", 0, crc)
+	for _, tc := range testCases {
+		if crc := zwc.Crc2(tc.message); crc != tc.expected {
+			t.Errorf("Expected %v, got %v", tc.expected, crc)
+		}
 	}
 }
