@@ -130,7 +130,7 @@ the delim character.
 This section contains the encoded checksum and must not end with a delim
 character. The checksum uses the same encoding as the payload.
 
-### CRC-8-CCITT
+### CRC-8
 
 WIDTH: 8  
 POLY: 0x07  
@@ -140,7 +140,7 @@ REFOUT: FALSE
 XOROUT: 0x00  
 CHECK: 0xF4  
 
-### CRC-16-CCITT
+### CRC-16
 
 WIDTH: 16  
 POLY: 0x1021  
