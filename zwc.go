@@ -21,7 +21,36 @@ import (
 	"io"
 	//"os"
 	"unicode/utf8"
-	//"github.com/snksoft/crc"
+	"github.com/snksoft/crc"
+)
+
+var (
+	CRC8 = &crc.Parameters{
+		Width: 8,
+		Polynomial: 0x07,
+		Init: 0x00,
+		ReflectIn: false,
+		ReflectOut: false,
+		FinalXor: 0x00,
+	}
+
+	CRC16 = &crc.Parameters{
+		Width: 16,
+                Polynomial: 0x1021,
+                Init: 0x0000,
+                ReflectIn: false,
+                ReflectOut: false,
+                FinalXor: 0x0000,
+	}
+
+	CRC32 = &crc.Parameters{
+		Width: 32,
+                Polynomial: 0x04C11DB7,
+                Init: 0xFFFFFFFF,
+                ReflectIn: true,
+                ReflectOut: true,
+                FinalXor: 0xFFFFFFFF,
+	}
 )
 
 type Encoding struct {
@@ -32,6 +61,7 @@ type Encoding struct {
 	checksumType int
 	encodeMap    [256]string
 	decodeMap    map[rune]byte
+	checksum     *crc.Hash
 }
 
 func NewEncodingSimple(version, encodingType, checksumType int) *Encoding {
@@ -97,6 +127,18 @@ func NewEncoding(table [16]string, delimChar rune, version, encodingType, checks
 		decodeMap[char] = byte(i)
 	}
 
+	var checksum *crc.Hash
+	switch checksumType {
+	case 0:
+		checksum = nil
+	case 8:
+		checksum = crc.NewHash(CRC8)
+	case 16:
+		checksum = crc.NewHash(CRC16)
+	case 32:
+		checksum = crc.NewHash(CRC32)
+	}
+
 	return &Encoding{
 		table,
 		delimChar,
@@ -105,6 +147,7 @@ func NewEncoding(table [16]string, delimChar rune, version, encodingType, checks
 		checksumType,
 		encodeMap,
 		decodeMap,
+		checksum,
 	}
 }
 
@@ -160,7 +203,9 @@ func (enc *Encoding) EncodePayload(dst, src []byte) int {
 		return 0
 	}
 
-	// TODO: calculate checksum while encoding payload
+	if enc.checksumType != 0 {
+		enc.checksum.Update(src)
+	}
 
 	si, di := 0, 0
 	for si < n {
@@ -172,15 +217,16 @@ func (enc *Encoding) EncodePayload(dst, src []byte) int {
 }
 
 func (enc *Encoding) EncodeChecksum(dst []byte) int {
-	switch enc.version {
-	case 1:
-		switch enc.checksumType {
-		case 0:
-			return 0
-		}
+	if enc.checksumType == 0 {
+		return 0
 	}
 
-	return 0
+	checksum := enc.checksum.CRC()
+	di := 0
+	for shift := enc.checksumType-8; shift >= 0; shift -= 8 {
+		di += copy(dst[di:], enc.encodeMap[checksum>>shift & 255])
+	}
+	return di
 }
 
 // EncodedLen returns the maximum length in bytes of
