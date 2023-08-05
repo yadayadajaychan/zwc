@@ -153,33 +153,6 @@ func (enc *Encoding) EncodeHeader(dst []byte) int {
 	return 0
 }
 
-// Crc2 takes a message that's 6 bits long
-// with 2 0-bits appended to it
-// and returns the 2-bit crc
-func Crc2(message byte) byte {
-	var crc [2]byte // crc register
-	var xor bool
-
-	for i := 7; i >= 0; i-- {
-		if crc[0] == 1 {
-			xor = true
-		} else {
-			xor = false
-		}
-
-		// shift the register left
-		crc[0] = crc[1]
-		crc[1] = message >> i & 1
-
-		if xor {
-			crc[0] = crc[0] ^ 1
-			crc[1] = crc[1] ^ 1
-		}
-	}
-
-	return crc[0]<<1 | crc[1]
-}
-
 func (enc *Encoding) EncodePayload(dst, src []byte) int {
 	n := len(src)
 
@@ -199,6 +172,14 @@ func (enc *Encoding) EncodePayload(dst, src []byte) int {
 }
 
 func (enc *Encoding) EncodeChecksum(dst []byte) int {
+	switch enc.version {
+	case 1:
+		switch enc.checksumType {
+		case 0:
+			return 0
+		}
+	}
+
 	return 0
 }
 
@@ -291,3 +272,29 @@ func (e *encoder) Close() error {
 }
 
 //func NewDecoder(enc *Encoding, r io.Reader) io.Reader
+
+// Crc2 takes an augmented message
+// and returns the 2-bit crc
+func Crc2(message byte) byte {
+	var crc [2]byte // crc register
+	var xor bool
+
+	for i := 7; i >= 0; i-- {
+		if crc[0] == 1 {
+			xor = true
+		} else {
+			xor = false
+		}
+
+		// shift the register left
+		crc[0] = crc[1]
+		crc[1] = message >> i & 1
+
+		if xor {
+			crc[0] = crc[0] ^ 1
+			crc[1] = crc[1] ^ 1
+		}
+	}
+
+	return crc[0]<<1 | crc[1]
+}

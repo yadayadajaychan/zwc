@@ -165,6 +165,113 @@ func TestEncodePayload(t *testing.T) {
 	}
 }
 
+func TestEncode(t *testing.T) {
+	testCases := []struct {
+		version		int
+		encodingType	int
+		checksumType	int
+		data		[]byte
+		expected	string
+	}{
+		// v1, 2-bit, no checksum
+		{1, 2, 0, []byte("helo"), "\xCD\x8F"     +
+
+					  "\xE2\x80\xAC" +
+					  "\xE2\x80\xAC" +
+					  "\xE2\x80\xAC" +
+					  "\xE2\x80\xAC" +
+
+					  "\xCD\x8F"     +
+
+					  "\xE2\x80\x8C" +
+					  "\xE2\x80\x8D" +
+					  "\xE2\x80\x8D" +
+					  "\xE2\x80\xAC" +
+
+					  "\xE2\x80\x8C" +
+					  "\xE2\x80\x8D" +
+					  "\xE2\x80\x8C" +
+					  "\xE2\x80\x8C" +
+
+					  "\xE2\x80\x8C" +
+					  "\xE2\x80\x8D" +
+					  "\xE2\x81\xA0" +
+					  "\xE2\x80\xAC" +
+
+					  "\xE2\x80\x8C" +
+					  "\xE2\x80\x8D" +
+					  "\xE2\x81\xA0" +
+					  "\xE2\x81\xA0" +
+
+					  "\xCD\x8F"},
+
+		// v1, 3-bit, no checksum
+		{1, 3, 0, []byte("helo"), "\xCD\x8F"     +
+
+					  "\xE2\x80\xAC" +
+					  "\xE2\x80\x8C" +
+					  "\xE2\x80\xAC" +
+					  "\xE2\x80\x8D" +
+
+					  "\xCD\x8F"     +
+
+					  "\xE2\x80\x8C" +
+					  "\xE2\x81\xA2" +
+					  "\xE2\x80\xAC" +
+
+					  "\xE2\x80\x8C" +
+					  "\xE2\x81\xA1" +
+					  "\xE2\x81\xA2" +
+
+					  "\xE2\x80\x8C" +
+					  "\xE2\x81\xA2" +
+					  "\xE2\x81\xA1" +
+
+					  "\xE2\x80\x8C" +
+					  "\xE2\x81\xA2" +
+					  "\xE2\x81\xA4" +
+
+					  "\xCD\x8F"},
+
+		// v1, 4-bit, no checksum
+		{1, 4, 0, []byte("helo"), "\xCD\x8F"     +
+
+					  "\xE2\x80\xAC" +
+					  "\xE2\x80\x8D" +
+					  "\xE2\x80\xAC" +
+					  "\xE2\x81\xA0" +
+
+					  "\xCD\x8F" +
+
+					  "\xE2\x81\xA3" +
+					  "\xE2\x81\xAA" +
+
+					  "\xE2\x81\xA3" +
+					  "\xE2\x81\xA2" +
+
+					  "\xE2\x81\xA3" +
+					  "\xE2\x81\xAE" +
+
+					  "\xE2\x81\xA3" +
+					  "\xF0\x9D\x85\xB4" +
+
+					  "\xCD\x8F"},
+	}
+
+	for _, tc := range testCases {
+		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
+		dst := make([]byte, enc.EncodedMaxLen(len(tc.data)))
+		n := enc.Encode(dst, tc.data)
+
+		if n != len(tc.expected) {
+			t.Errorf("Expected %v, got %v", len(tc.expected), n)
+		}
+		if string(dst[:n]) != tc.expected {
+			t.Errorf("Expected %q, got %q", tc.expected, string(dst[:n]))
+		}
+	}
+}
+
 func TestCrc2(t *testing.T) {
 	// this table was automatically generated
 	expected := [256]byte{0, 1, 2, 3, 3, 2, 1, 0, 1, 0, 3, 2, 2, 3, 0, 1,
