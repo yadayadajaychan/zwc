@@ -16,12 +16,12 @@
 .\"
 .\" You should have received a copy of the GNU General Public License along
 .\" with ZWC. If not, see <https://www.gnu.org/licenses/>.
-.TH ZWC 5 2023-08-04 "ZWC v0.0.1" "ZWC File Format Manual"
+.TH ZWC 5 2023-08-05 "ZWC v0.0.1" "ZWC File Format Manual"
 .SH NAME
 zwc \- format of ZWC files
 .SH DESCRIPTION
 This is a reproduction of
-the ZWC File Format Specification Version 0.8
+the ZWC File Format Specification Version 0.9
 in man page format.
 Should any differences arise between
 this and the specification found on the ZWC project page,
@@ -144,8 +144,11 @@ E.g. to set the file format as version 2,
 the encoding as 4-bit and
 the checksum as crc-32,
 the header would be 0b01\_10\_11_(crc-2).
+.PP
+Below are the parameters for the crc used to protect the header:
 .TP
 .B CRC-2
+.br
 WIDTH: 2
 .br
 POLY: 0x03
@@ -166,6 +169,54 @@ The payload is separated from the header and checksum by the delim character.
 This section contains the encoded checksum and
 must not end with a delim character.
 The checksum uses the same encoding as the payload.
+.TP
+.B CRC-8-CCITT
+.br
+WIDTH: 8
+.br
+POLY: 0x07
+.br
+INIT: 0x00
+.br
+REFIN: FALSE
+.br
+REFOUT: FALSE
+.br
+XOROUT: 0x00
+.br
+CHECK: 0xF4
+.TP
+.B CRC-16-CCITT
+.br
+WIDTH: 16
+.br
+POLY: 0x1021
+.br
+INIT: 0x0000
+.br
+REFIN: FALSE
+.br
+REFOUT: FALSE
+.br
+XOROUT: 0x0000
+.br
+CHECK: 0x31C3
+.TP
+.B CRC-32
+.br
+WIDTH: 32
+.br
+POLY: 0x04C11DB7
+.br
+INIT: 0xFFFFFFFF
+.br
+REFIN: TRUE
+.br
+REFOUT: TRUE
+.br
+XOROUT: 0xFFFFFFFF
+.br
+CHECK: 0xCBF43926
 .SH AUTHOR
 This program and accompanying manuals were written by Ethan Cheng <ethanrc0528@gmail.com>
 .SH REPORTING BUGS

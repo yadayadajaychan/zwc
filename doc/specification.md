@@ -1,4 +1,4 @@
-# ZWC File Format Specification Version 0.8 (Draft)
+# ZWC File Format Specification Version 0.9 (Draft)
 
 The ZWC format describes how data should be encoded as zero-width characters.
 This encoded data is then put inside a message of non-zero-width characters.
@@ -109,6 +109,8 @@ as crc-32, the header would be 0b01\_10\_11_(crc-2).
 
 ### CRC-2
 
+Below are the parameters for the crc used to protect the header:
+
 WIDTH: 2  
 POLY: 0x03  
 INIT: 0x00  
@@ -127,6 +129,36 @@ the delim character.
 
 This section contains the encoded checksum and must not end with a delim
 character. The checksum uses the same encoding as the payload.
+
+### CRC-8-CCITT
+
+WIDTH: 8  
+POLY: 0x07  
+INIT: 0x00  
+REFIN: FALSE  
+REFOUT: FALSE  
+XOROUT: 0x00  
+CHECK: 0xF4  
+
+### CRC-16-CCITT
+
+WIDTH: 16  
+POLY: 0x1021  
+INIT: 0x0000  
+REFIN: FALSE  
+REFOUT: FALSE  
+XOROUT: 0x0000  
+CHECK: 0x31C3  
+
+### CRC-32
+
+WIDTH: 32  
+POLY: 0x04C11DB7  
+INIT: 0xFFFFFFFF  
+REFIN: TRUE  
+REFOUT: TRUE  
+XOROUT: 0xFFFFFFFF  
+CHECK: 0xCBF43926  
 
 # Copyright Information
 
