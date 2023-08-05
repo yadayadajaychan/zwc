@@ -152,48 +152,38 @@ func NewEncoding(table [16]string, delimChar rune, version, encodingType, checks
 }
 
 func (enc *Encoding) Encode(dst, src []byte) int {
-	switch enc.version {
-	case 1:
-		di := 0
-		di += utf8.EncodeRune(dst[di:], enc.delimChar)
-		di += enc.EncodeHeader(dst[di:])
-		di += utf8.EncodeRune(dst[di:], enc.delimChar)
+	di := 0
+	di += utf8.EncodeRune(dst[di:], enc.delimChar)
+	di += enc.EncodeHeader(dst[di:])
+	di += utf8.EncodeRune(dst[di:], enc.delimChar)
 
-		di += enc.EncodePayload(dst[di:], src)
-		di += utf8.EncodeRune(dst[di:], enc.delimChar)
-		di += enc.EncodeChecksum(dst[di:])
-		return di
-	}
-
-	return 0
+	di += enc.EncodePayload(dst[di:], src)
+	di += utf8.EncodeRune(dst[di:], enc.delimChar)
+	di += enc.EncodeChecksum(dst[di:])
+	return di
 }
 
 func (enc *Encoding) EncodeHeader(dst []byte) int {
-	switch enc.version {
-	case 1:
-		di := 0
+	di := 0
 
-		// v1 corresponds to a value of 0
-		di += copy(dst[di:], enc.encode[0])
+	// v1 corresponds to a value of 0
+	di += copy(dst[di:], enc.encode[0])
 
-		di += copy(dst[di:], enc.encode[enc.encodingType-2])
+	di += copy(dst[di:], enc.encode[enc.encodingType-2])
 
-		var checksumType int
-		switch enc.checksumType {
-		case 0, 8, 16:
-			checksumType = enc.checksumType / 8
-		case 32:
-			checksumType = 3
-		}
-		di += copy(dst[di:], enc.encode[checksumType])
-
-		crc := Crc2(byte(0<<6 + (enc.encodingType-2)<<4 + checksumType<<2))
-		di += copy(dst[di:], enc.encode[crc])
-
-		return di
+	var checksumType int
+	switch enc.checksumType {
+	case 0, 8, 16:
+		checksumType = enc.checksumType / 8
+	case 32:
+		checksumType = 3
 	}
+	di += copy(dst[di:], enc.encode[checksumType])
 
-	return 0
+	crc := Crc2(byte(0<<6 + (enc.encodingType-2)<<4 + checksumType<<2))
+	di += copy(dst[di:], enc.encode[crc])
+
+	return di
 }
 
 func (enc *Encoding) EncodePayload(dst, src []byte) int {
@@ -240,22 +230,19 @@ func (enc *Encoding) EncodedMaxLen(n int) int {
 // EncodedPayloadLen returns the maximum length in bytes of
 // the encoded ZWC payload
 func (enc *Encoding) EncodedPayloadMaxLen(n int) int {
-	switch enc.version {
-	case 1:
-		switch enc.encodingType {
-		case 2:
-			// each byte takes 4 characters to encode
-			// each character is 3 bytes long
-			return n * 12
-		case 3:
-			// each byte take 3 characters to encode
-			// each character is 3 bytes long
-			return n * 9
-		case 4:
-			// each byte takes 2 characters to encode
-			// each character can be up to 4 bytes long
-			return n * 8
-		}
+	switch enc.encodingType {
+	case 2:
+		// each byte takes 4 characters to encode
+		// each character is 3 bytes long
+		return n * 12
+	case 3:
+		// each byte take 3 characters to encode
+		// each character is 3 bytes long
+		return n * 9
+	case 4:
+		// each byte takes 2 characters to encode
+		// each character can be up to 4 bytes long
+		return n * 8
 	}
 
 	return 0
@@ -264,33 +251,25 @@ func (enc *Encoding) EncodedPayloadMaxLen(n int) int {
 // EncodedHeaderLen returns the length in bytes of
 // the encoded ZWC header
 func (enc *Encoding) EncodedHeaderLen() int {
-	switch enc.version {
-	case 1:
-		return 12 // header always uses 2-bit encoding
-	}
-
-	return 0
+	return 12 // header always uses 2-bit encoding
 }
 
 // EncodedChecksumLen returns the maximum length in bytes of
 // the encoded ZWC checksum
 func (enc *Encoding) EncodedChecksumMaxLen() int {
-	switch enc.version {
-	case 1:
-		switch enc.encodingType {
-		case 2:
-			// each byte takes 4 characters to encode
-			// each character is 3 bytes long
-			return enc.checksumType / 8 * 12
-		case 3:
-			// each byte take 3 characters to encode
-			// each character is 3 bytes long
-			return enc.checksumType / 8 * 9
-		case 4:
-			// each byte takes 2 characters to encode
-			// each character can be up to 4 bytes long
-			return enc.checksumType / 8 * 8
-		}
+	switch enc.encodingType {
+	case 2:
+		// each byte takes 4 characters to encode
+		// each character is 3 bytes long
+		return enc.checksumType / 8 * 12
+	case 3:
+		// each byte take 3 characters to encode
+		// each character is 3 bytes long
+		return enc.checksumType / 8 * 9
+	case 4:
+		// each byte takes 2 characters to encode
+		// each character can be up to 4 bytes long
+		return enc.checksumType / 8 * 8
 	}
 
 	return 0
