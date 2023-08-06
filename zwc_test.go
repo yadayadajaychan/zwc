@@ -410,6 +410,37 @@ func TestEncodeAndEncoder(t *testing.T) {
 	}
 }
 
+// TestEncoderNumberOfBytesWritten tests that
+// the number of bytes returned by encoder.Write
+// are the actual number of bytes written
+func TestEncoderNumberOfBytesWritten(t *testing.T) {
+	testCases := []struct {
+		version      int
+		encodingType int
+		checksumType int
+		data         []byte
+	}{
+		{1, 2, 0, []byte("helo")},
+		{1, 2, 8, []byte("longer piece of data")},
+		{1, 3, 16, []byte("longer piece of data")},
+		{1, 4, 32, []byte("longer piece of data")},
+	}
+
+	for _, tc := range testCases {
+		var b bytes.Buffer
+		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
+		e := zwc.NewEncoder(enc, &b)
+
+		n, err := e.Write(tc.data)
+		if err != nil {
+			t.Errorf("Write returned an error of %v", err)
+		}
+		if n != b.Len() {
+			t.Errorf("Expected %v, got %v", b.Len(), n)
+		}
+	}
+}
+
 func TestCRC2(t *testing.T) {
 	// this table was automatically generated
 	expected := [256]byte{0, 1, 2, 3, 3, 2, 1, 0, 1, 0, 3, 2, 2, 3, 0, 1,

@@ -276,6 +276,14 @@ func (enc *Encoding) EncodedChecksumMaxLen() int {
 	return 0
 }
 
+// delimCharAsUTF8 is a convenience function which returns
+// the delimChar as a UTF8 encoded slice of bytes
+func (enc *Encoding) delimCharAsUTF8() []byte {
+	delimChar := make([]byte, utf8.UTFMax)
+	delimCharSize := utf8.EncodeRune(delimChar, enc.delimChar)
+	return delimChar[:delimCharSize]
+}
+
 type encoder struct {
 	err    error
 	enc    *Encoding
@@ -288,41 +296,45 @@ func NewEncoder(enc *Encoding, w io.Writer) io.WriteCloser {
 }
 
 func (e *encoder) Write(p []byte) (n int, err error) {
+	var nTotal int
 	if !e.header {
 		e.header = true
 
 		// write delim character
-		delimChar := make([]byte, utf8.UTFMax)
-		delimCharSize := utf8.EncodeRune(delimChar, e.enc.delimChar)
-		delimChar = delimChar[:delimCharSize]
-		if n, err := e.w.Write(delimChar); err != nil {
-			return n, err
+		delimChar := e.enc.delimCharAsUTF8()
+		n, err = e.w.Write(delimChar)
+		nTotal += n
+		if err != nil {
+			return nTotal, err
 		}
 
 		// write encoded header
 		header := make([]byte, e.enc.EncodedHeaderLen())
 		headerSize := e.enc.EncodeHeader(header)
-		if n, err := e.w.Write(header[:headerSize]); err != nil {
-			return n, err
+		n, err = e.w.Write(header[:headerSize])
+		nTotal += n
+		if err != nil {
+			return nTotal, err
 		}
 
 		// write delim character
-		if n, err := e.w.Write(delimChar); err != nil {
-			return n, err
+		n, err = e.w.Write(delimChar);
+		nTotal += n
+		if err != nil {
+			return nTotal, err
 		}
 	}
 
 	dst := make([]byte, e.enc.EncodedPayloadMaxLen(len(p)))
 	size := e.enc.EncodePayload(dst, p)
-	return e.w.Write(dst[:size])
+	n, err = e.w.Write(dst[:size])
+	nTotal += n
+	return nTotal, err
 }
 
 func (e *encoder) Close() error {
 	// write delim character
-	delimChar := make([]byte, utf8.UTFMax)
-	delimCharSize := utf8.EncodeRune(delimChar, e.enc.delimChar)
-	delimChar = delimChar[:delimCharSize]
-	if _, err := e.w.Write(delimChar); err != nil {
+	if _, err := e.w.Write(e.enc.delimCharAsUTF8()); err != nil {
 		return err
 	}
 
@@ -332,6 +344,9 @@ func (e *encoder) Close() error {
 	if _, err := e.w.Write(dst[:size]); err != nil {
 		return err
 	}
+
+	e.header = false
+
 	return nil
 }
 
