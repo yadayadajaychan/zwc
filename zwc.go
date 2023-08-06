@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License along
 // with ZWC. If not, see <https://www.gnu.org/licenses/>.
 
-// package zwc implements the encoding/decoding of files in the ZWC format
+// Package zwc implements the encoding/decoding of files in the ZWC format
 package zwc
 
 import (
@@ -276,12 +276,10 @@ func (enc *Encoding) EncodedChecksumMaxLen() int {
 }
 
 type encoder struct {
-	err  error
-	enc  *Encoding
-	w    io.Writer
-	buf  [3]byte
-	nbuf int
-	out  [1024]byte
+	err    error
+	enc    *Encoding
+	w      io.Writer
+	header bool // whether or not the header has been written yet
 }
 
 func NewEncoder(enc *Encoding, w io.Writer) io.WriteCloser {
@@ -289,10 +287,42 @@ func NewEncoder(enc *Encoding, w io.Writer) io.WriteCloser {
 }
 
 func (e *encoder) Write(p []byte) (n int, err error) {
-	return 0, nil
+	if !e.header {
+		e.header = true
+
+		// write delim character
+		delimChar := make([]byte, utf8.UTFMax)
+		delimCharSize := utf8.EncodeRune(delimChar, e.enc.delimChar)
+		delimChar = delimChar[:delimCharSize]
+		if n, err := e.w.Write(delimChar); err != nil {
+			return n, err
+		}
+
+		// write encoded header
+		header := make([]byte, e.enc.EncodedHeaderLen())
+		headerSize := e.enc.EncodeHeader(header)
+		if n, err := e.w.Write(header[:headerSize]); err != nil {
+			return n, err
+		}
+
+		// write delim character
+		if n, err := e.w.Write(delimChar); err != nil {
+			return n, err
+		}
+	}
+
+	dst := make([]byte, e.enc.EncodedPayloadMaxLen(len(p)))
+	size := e.enc.EncodePayload(dst, p)
+	return e.w.Write(dst[:size])
 }
 
 func (e *encoder) Close() error {
+	// write encoded checksum
+	dst := make([]byte, e.enc.EncodedChecksumMaxLen())
+	size := e.enc.EncodeChecksum(dst)
+	if _, err := e.w.Write(dst[:size]); err != nil {
+		return err
+	}
 	return nil
 }
 
