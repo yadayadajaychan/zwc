@@ -1,6 +1,7 @@
 package zwc_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/yadayadajaychan/zwc"
@@ -221,7 +222,9 @@ func TestEncodeChecksum(t *testing.T) {
 	}
 }
 
-func TestEncode(t *testing.T) {
+// TestEncodeAndEncoder tests the Encode method of Encoding
+// and the Write and Close methods of Encoder
+func TestEncodeAndEncoder(t *testing.T) {
 	testCases := []struct {
 		version		int
 		encodingType	int
@@ -350,6 +353,7 @@ func TestEncode(t *testing.T) {
 					   "\xE2\x81\xAB"},
 	}
 
+	// Encode method of Encoding
 	for _, tc := range testCases {
 		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
 		dst := make([]byte, enc.EncodedMaxLen(len(tc.data)))
@@ -360,6 +364,48 @@ func TestEncode(t *testing.T) {
 		}
 		if string(dst[:n]) != tc.expected {
 			t.Errorf("Expected %q, got %q", tc.expected, string(dst[:n]))
+		}
+	}
+
+	// Write and Close methods of encoder
+	for _, tc := range testCases {
+		var b bytes.Buffer
+		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
+		e := zwc.NewEncoder(enc, &b)
+
+		if _, err := e.Write(tc.data); err != nil {
+			t.Errorf("Write returned an error of %v", err)
+		}
+
+		if err := e.Close(); err != nil {
+			t.Errorf("Close returned an error of %v", err)
+		}
+
+		if output := b.String(); output != tc.expected {
+			t.Errorf("Expected %q, got %q", tc.expected, output)
+		}
+	}
+
+	// Write and Close methods of encoder
+	// same as above but
+	// each byte is written one by one
+	for _, tc := range testCases {
+		var b bytes.Buffer
+		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
+		e := zwc.NewEncoder(enc, &b)
+
+		for _, v := range tc.data {
+			if _, err := e.Write([]byte{v}); err != nil {
+				t.Errorf("Write returned an error of %v", err)
+			}
+		}
+
+		if err := e.Close(); err != nil {
+			t.Errorf("Close returned an error of %v", err)
+		}
+
+		if output := b.String(); output != tc.expected {
+			t.Errorf("Expected %q, got %q", tc.expected, output)
 		}
 	}
 }
@@ -455,6 +501,7 @@ func TestCRCs(t *testing.T) {
 		{zwc.CRC8, []byte("123456789"), 0xF4},
 		{zwc.CRC16, []byte("123456789"), 0x31C3},
 		{zwc.CRC32, []byte("123456789"), 0xCBF43926},
+		{zwc.CRC32, []byte("helo"), 0x858f5159},
 	}
 
 	for _, tc := range testCases {
