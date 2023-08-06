@@ -80,7 +80,7 @@ func TestEncodeHeader(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
+		enc := zwc.NewEncoding(tc.version, tc.encodingType, tc.checksumType)
 		dst := make([]byte, enc.EncodedHeaderLen())
 		n := enc.EncodeHeader(dst)
 
@@ -151,7 +151,7 @@ func TestEncodePayload(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType,
+		enc := zwc.NewEncoding(tc.version, tc.encodingType,
 								tc.checksumType)
 
 		dst := make([]byte, enc.EncodedPayloadMaxLen(len(tc.data)))
@@ -203,7 +203,7 @@ func TestEncodeChecksum(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
+		enc := zwc.NewEncoding(tc.version, tc.encodingType, tc.checksumType)
 
 		n := enc.EncodePayload(nil, tc.data)
 		if n != 0 {
@@ -355,7 +355,7 @@ func TestEncodeAndEncoder(t *testing.T) {
 
 	// Encode method of Encoding
 	for _, tc := range testCases {
-		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
+		enc := zwc.NewEncoding(tc.version, tc.encodingType, tc.checksumType)
 		dst := make([]byte, enc.EncodedMaxLen(len(tc.data)))
 		n := enc.Encode(dst, tc.data)
 
@@ -370,7 +370,7 @@ func TestEncodeAndEncoder(t *testing.T) {
 	// Write and Close methods of encoder
 	for _, tc := range testCases {
 		var b bytes.Buffer
-		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
+		enc := zwc.NewEncoding(tc.version, tc.encodingType, tc.checksumType)
 		e := zwc.NewEncoder(enc, &b)
 
 		if _, err := e.Write(tc.data); err != nil {
@@ -391,7 +391,7 @@ func TestEncodeAndEncoder(t *testing.T) {
 	// each byte is written one by one
 	for _, tc := range testCases {
 		var b bytes.Buffer
-		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
+		enc := zwc.NewEncoding(tc.version, tc.encodingType, tc.checksumType)
 		e := zwc.NewEncoder(enc, &b)
 
 		for _, v := range tc.data {
@@ -428,7 +428,7 @@ func TestEncoderNumberOfBytesWritten(t *testing.T) {
 
 	for _, tc := range testCases {
 		var b bytes.Buffer
-		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
+		enc := zwc.NewEncoding(tc.version, tc.encodingType, tc.checksumType)
 		e := zwc.NewEncoder(enc, &b)
 
 		n, err := e.Write(tc.data)

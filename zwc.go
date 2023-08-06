@@ -64,7 +64,7 @@ type Encoding struct {
 	checksum     *crc.Hash
 }
 
-func NewEncodingSimple(version, encodingType, checksumType int) *Encoding {
+func NewEncoding(version, encodingType, checksumType int) *Encoding {
 	switch version {
 	case 1:
 		table := [16]string{
@@ -86,13 +86,13 @@ func NewEncodingSimple(version, encodingType, checksumType int) *Encoding {
 			"\xF0\x9D\x85\xB4", // 15
 		}
 		delimChar := '\u034F'
-		return NewEncoding(table, delimChar, version, encodingType, checksumType)
+		return NewEncodingCustom(table, delimChar, version, encodingType, checksumType)
 	default:
 		panic("only ZWC file format version 1 is supported")
 	}
 }
 
-func NewEncoding(table [16]string, delimChar rune, version, encodingType, checksumType int) *Encoding {
+func NewEncodingCustom(table [16]string, delimChar rune, version, encodingType, checksumType int) *Encoding {
 	// sanity checks
 	if version != 1 {
 		panic("only ZWC file format version 1 is supported")
