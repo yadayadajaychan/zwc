@@ -216,6 +216,7 @@ func (enc *Encoding) EncodeChecksum(dst []byte) int {
 	for shift := enc.checksumType-8; shift >= 0; shift -= 8 {
 		di += copy(dst[di:], enc.encodeMap[checksum>>shift & 255])
 	}
+	enc.checksum.Reset()
 	return di
 }
 
@@ -317,6 +318,14 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 }
 
 func (e *encoder) Close() error {
+	// write delim character
+	delimChar := make([]byte, utf8.UTFMax)
+	delimCharSize := utf8.EncodeRune(delimChar, e.enc.delimChar)
+	delimChar = delimChar[:delimCharSize]
+	if _, err := e.w.Write(delimChar); err != nil {
+		return err
+	}
+
 	// write encoded checksum
 	dst := make([]byte, e.enc.EncodedChecksumMaxLen())
 	size := e.enc.EncodeChecksum(dst)
