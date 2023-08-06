@@ -166,6 +166,57 @@ func TestEncodePayload(t *testing.T) {
 	}
 }
 
+func TestEncodeChecksum(t *testing.T) {
+	testCases := []struct {
+		version		int
+		encodingType	int
+		checksumType	int
+		data		[]byte
+		expected	string
+	}{
+		{1, 2, 0, []byte("123456789"),  ""},
+		{1, 2, 8, []byte("123456789"),  "\xE2\x81\xA0" +
+					        "\xE2\x81\xA0" +
+					        "\xE2\x80\x8C" +
+					        "\xE2\x80\xAC"},
+
+		{1, 3, 16, []byte("123456789"), "\xE2\x80\xAC" +
+		                                "\xE2\x81\xA3" +
+						"\xE2\x80\x8C" +
+						"\xE2\x81\xA0" +
+						"\xE2\x80\xAC" +
+						"\xE2\x81\xA0"},
+
+		{1, 4, 32, []byte("123456789"), "\xE2\x81\xAE" +
+						"\xE2\x81\xAD" +
+						"\xF0\x9D\x85\xB4" +
+						"\xE2\x81\xA1" +
+						"\xE2\x81\xA0" +
+						"\xE2\x81\xAB" +
+						"\xE2\x80\x8D" +
+						"\xE2\x81\xA3"},
+	}
+
+	for _, tc := range testCases {
+		enc := zwc.NewEncodingSimple(tc.version, tc.encodingType, tc.checksumType)
+
+		n := enc.EncodePayload(nil, tc.data)
+		if n != 0 {
+			t.Errorf("Expected %v, got %v", 0, n)
+		}
+
+		dst := make([]byte, enc.EncodedChecksumMaxLen())
+		n = enc.EncodeChecksum(dst)
+
+		if n != len(tc.expected) {
+			t.Errorf("Expected %v, got %v", len(tc.expected), n)
+		}
+		if string(dst[:n]) != tc.expected {
+			t.Errorf("Expected %q, got %q", tc.expected, string(dst[:n]))
+		}
+	}
+}
+
 func TestEncode(t *testing.T) {
 	testCases := []struct {
 		version		int
