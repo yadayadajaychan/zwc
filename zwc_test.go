@@ -183,16 +183,20 @@ func TestEncodeChecksum(t *testing.T) {
 		{1, 3, 16, []byte("123456789"), "\xE2\x80\xAC" +
 		                                "\xE2\x81\xA3" +
 						"\xE2\x80\x8C" +
+
 						"\xE2\x81\xA0" +
 						"\xE2\x80\xAC" +
 						"\xE2\x81\xA0"},
 
 		{1, 4, 32, []byte("123456789"), "\xE2\x81\xAE" +
 						"\xE2\x81\xAD" +
+
 						"\xF0\x9D\x85\xB4" +
 						"\xE2\x81\xA1" +
+
 						"\xE2\x81\xA0" +
 						"\xE2\x81\xAB" +
+
 						"\xE2\x80\x8D" +
 						"\xE2\x81\xA3"},
 	}
@@ -293,7 +297,7 @@ func TestEncode(t *testing.T) {
 					  "\xE2\x80\xAC" +
 					  "\xE2\x81\xA0" +
 
-					  "\xCD\x8F" +
+					  "\xCD\x8F"     +
 
 					  "\xE2\x81\xA3" +
 					  "\xE2\x81\xAA" +
@@ -308,6 +312,42 @@ func TestEncode(t *testing.T) {
 					  "\xF0\x9D\x85\xB4" +
 
 					  "\xCD\x8F"},
+
+		// v1, 4-bit, crc-32
+		{1, 4, 32, []byte("helo"), "\xCD\x8F"     +
+
+					   "\xE2\x80\xAC" +
+					   "\xE2\x80\x8D" +
+					   "\xE2\x81\xA0" +
+					   "\xE2\x80\x8C" +
+
+					   "\xCD\x8F"     +
+
+					   "\xE2\x81\xA3" +
+					   "\xE2\x81\xAA" +
+
+					   "\xE2\x81\xA3" +
+					   "\xE2\x81\xA2" +
+
+					   "\xE2\x81\xA3" +
+					   "\xE2\x81\xAE" +
+
+					   "\xE2\x81\xA3" +
+					   "\xF0\x9D\x85\xB4" +
+
+					   "\xCD\x8F"     +
+
+					   "\xE2\x81\xAA" +
+					   "\xE2\x81\xA2" +
+
+					   "\xE2\x81\xAA" +
+					   "\xF0\x9D\x85\xB4" +
+
+					   "\xE2\x81\xA2" +
+					   "\xE2\x80\x8C" +
+
+					   "\xE2\x81\xA2" +
+					   "\xE2\x81\xAB"},
 	}
 
 	for _, tc := range testCases {
