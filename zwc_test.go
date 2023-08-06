@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/yadayadajaychan/zwc"
+	"github.com/snksoft/crc"
 )
 
 func TestEncodeHeader(t *testing.T) {
@@ -272,7 +273,7 @@ func TestEncode(t *testing.T) {
 	}
 }
 
-func TestCrc2(t *testing.T) {
+func TestCRC2(t *testing.T) {
 	// this table was automatically generated
 	expected := [256]byte{0, 1, 2, 3, 3, 2, 1, 0, 1, 0, 3, 2, 2, 3, 0, 1,
 			      2, 3, 0, 1, 1, 0, 3, 2, 3, 2, 1, 0, 0, 1, 2, 3,
@@ -292,7 +293,7 @@ func TestCrc2(t *testing.T) {
 			      2, 3, 0, 1, 1, 0, 3, 2, 3, 2, 1, 0, 0, 1, 2, 3}
 
 	for n := 0; n < 256; n++ {
-		if crc := zwc.Crc2(byte(n)); crc != expected[n] {
+		if crc := zwc.CRC2(byte(n)); crc != expected[n] {
 			t.Errorf("Expected %v, got %v", expected[n], crc)
 		}
 	}
@@ -346,8 +347,32 @@ func TestCrc2(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if crc := zwc.Crc2(tc.message); crc != tc.expected {
+		if crc := zwc.CRC2(tc.message); crc != tc.expected {
 			t.Errorf("Expected %v, got %v", tc.expected, crc)
+		}
+	}
+}
+
+// Test TestCRCs tests the output of the crc calculations from
+// github.com/snksoft/crc
+func TestCRCs(t *testing.T) {
+	testCases := []struct {
+		crcType  *crc.Parameters
+		data     []byte
+		expected uint64
+	}{
+		{zwc.CRC8, []byte("123456789"), 0xF4},
+		{zwc.CRC16, []byte("123456789"), 0x31C3},
+		{zwc.CRC32, []byte("123456789"), 0xCBF43926},
+	}
+
+	for _, tc := range testCases {
+		hash := crc.NewHash(tc.crcType)
+		hash.Update(tc.data)
+		checksum := hash.CRC()
+
+		if checksum != tc.expected {
+			t.Errorf("Expected %v, got %v", tc.expected, checksum)
 		}
 	}
 }

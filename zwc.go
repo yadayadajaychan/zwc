@@ -180,7 +180,7 @@ func (enc *Encoding) EncodeHeader(dst []byte) int {
 	}
 	di += copy(dst[di:], enc.encode[checksumType])
 
-	crc := Crc2(byte(0<<6 + (enc.encodingType-2)<<4 + checksumType<<2))
+	crc := CRC2(byte(0<<6 + (enc.encodingType-2)<<4 + checksumType<<2))
 	di += copy(dst[di:], enc.encode[crc])
 
 	return di
@@ -298,9 +298,10 @@ func (e *encoder) Close() error {
 
 //func NewDecoder(enc *Encoding, r io.Reader) io.Reader
 
-// Crc2 takes an augmented message
+// CRC2 takes an augmented message
+// (6-bit message + 2-bit CRC)
 // and returns the 2-bit crc
-func Crc2(message byte) byte {
+func CRC2(message byte) byte {
 	var crc [2]byte // crc register
 	var xor bool
 
