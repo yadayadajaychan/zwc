@@ -24,7 +24,8 @@ import (
 	"github.com/snksoft/crc"
 )
 
-func TestEncodeHeader(t *testing.T) {
+// TestEncodeHeaderAndDecodeHeader tests EncodeHeader and DecodeHeader
+func TestEncodeHeaderAndDecodeHeader(t *testing.T) {
 	testCases := []struct {
 		version		int
 		encodingType	int
@@ -95,6 +96,7 @@ func TestEncodeHeader(t *testing.T) {
 			   "\xE2\x80\x8C"},
 	}
 
+	// test EncodeHeader
 	for _, tc := range testCases {
 		enc := zwc.NewEncoding(tc.version, tc.encodingType, tc.checksumType)
 		dst := make([]byte, enc.EncodedHeaderLen())
@@ -105,6 +107,21 @@ func TestEncodeHeader(t *testing.T) {
 		}
 		if string(dst) != tc.expected {
 			t.Errorf("Expected %q, got %q", tc.expected, string(dst))
+		}
+	}
+
+	// test DecodeHeader
+	for _, tc := range testCases{
+		v, e, c, err := zwc.DecodeHeader([]byte(tc.expected))
+
+		if err != nil {
+			t.Log(err)
+			t.Fail()
+		}
+		if v != tc.version || e != tc.encodingType || c != tc.checksumType {
+			t.Errorf("Expected %v, %v, %v, got %v, %v, %v",
+					tc.version, tc.encodingType, tc.checksumType,
+					v, e, c)
 		}
 	}
 }
@@ -453,6 +470,68 @@ func TestEncoderNumberOfBytesWritten(t *testing.T) {
 		}
 		if n != len(tc.data) {
 			t.Errorf("Expected %v, got %v", len(tc.data), n)
+		}
+	}
+}
+
+func TestGuessEncodingType(t *testing.T) {
+	testCases := []struct {
+		payload  []byte
+		expected int
+	}{
+		{[]byte("\xE2\x80\x8C" +
+			"\xE2\x80\x8D" +
+			"\xE2\x80\x8D" +
+			"\xE2\x80\xAC" +
+
+			"\xE2\x80\x8C" +
+			"\xE2\x80\x8D" +
+			"\xE2\x80\x8C" +
+			"\xE2\x80\x8C" +
+
+			"\xE2\x80\x8C" +
+			"\xE2\x80\x8D" +
+			"\xE2\x81\xA0" +
+			"\xE2\x80\xAC" +
+
+			"\xE2\x80\x8C" +
+			"\xE2\x80\x8D" +
+			"\xE2\x81\xA0" +
+			"\xE2\x81\xA0"), 2},
+
+		{[]byte("\xE2\x80\x8C" +
+			"\xE2\x81\xA2" +
+			"\xE2\x80\xAC" +
+
+			"\xE2\x80\x8C" +
+			"\xE2\x81\xA1" +
+			"\xE2\x81\xA2" +
+
+			"\xE2\x80\x8C" +
+			"\xE2\x81\xA2" +
+			"\xE2\x81\xA1" +
+
+			"\xE2\x80\x8C" +
+			"\xE2\x81\xA2" +
+			"\xE2\x81\xA4"), 3},
+
+		{[]byte("\xE2\x81\xA3" +
+			"\xE2\x81\xAA" +
+
+			"\xE2\x81\xA3" +
+			"\xE2\x81\xA2" +
+
+			"\xE2\x81\xA3" +
+			"\xE2\x81\xAE" +
+
+			"\xE2\x81\xA3" +
+			"\xF0\x9D\x85\xB4"), 4},
+	}
+
+	for _, tc := range testCases {
+		encodingType := zwc.GuessEncodingType(tc.payload)
+		if encodingType != tc.expected {
+			t.Errorf("Expected %v, got %v", tc.expected, encodingType)
 		}
 	}
 }

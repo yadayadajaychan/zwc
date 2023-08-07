@@ -19,6 +19,7 @@ package zwc
 
 import (
 	"io"
+	"strconv"
 	"unicode/utf8"
 	"github.com/snksoft/crc"
 )
@@ -343,6 +344,91 @@ func (e *encoder) Close() error {
 	e.header = false
 
 	return nil
+}
+
+type CorruptHeaderError struct {
+	msg          string
+	HeaderLength int // length of the decoded header in bits
+	CRCFail      bool // whether or not the crc failed
+}
+
+func (e CorruptHeaderError) Error() string {
+	e.msg = "zwc: header is corrupt"
+
+	if e.HeaderLength < 8 {
+		e.msg += "\nzwc: header shorter than expected\n" +
+				"zwc: expected 8, got " + strconv.Itoa(e.HeaderLength)
+	}
+	if e.CRCFail {
+		e.msg += "\nzwc: crc for header failed"
+	}
+
+	return e.msg
+}
+
+func DecodeHeader(src []byte) (version, encodingType, checksumType int, err error) {
+	enc := NewEncoding(1, 2, 0)
+
+	i := 6
+	var header byte
+	for _, char := range string(src) {
+		if i < 0 {
+			break
+		}
+
+		n := enc.decodeMap[char]
+		header = header | n<<i
+
+		i -= 2
+	}
+
+	// less than 4 runes were read from src
+	if !(i < 0) {
+		return 0, 0, 0, CorruptHeaderError{CRCFail: false, HeaderLength: 6-i}
+	}
+
+	// crc failed
+	if CRC2(header) != 0 {
+		return 0, 0, 0, CorruptHeaderError{CRCFail: true, HeaderLength: 8}
+	}
+
+	version = int(header>>6 & 3 + 1)
+	encodingType = int(header>>4 & 3 + 2)
+	rawChecksumType := header>>2 & 3
+	switch rawChecksumType {
+	case 0, 1, 2:
+		checksumType = int(rawChecksumType * 8)
+	case 3:
+		checksumType = 32
+	}
+
+	return version, encodingType, checksumType, nil
+}
+
+// GuessEncodingType uses heuristics to guess the encoding of the payload
+func GuessEncodingType(p []byte) int {
+	enc := NewEncoding(1, 4, 0)
+
+	encodingType := 2
+	for _, v := range string(p) {
+		n := enc.decodeMap[v]
+
+		if encodingType < 3 && 4 <= n && n < 8 {
+			encodingType = 3
+		} else if 8 <= n && n < 16 {
+			return 4
+		}
+	}
+
+	return encodingType
+}
+
+func (enc *Encoding) Decode(dst, src []byte) (n int, err error) {
+	return 0, nil
+}
+
+func (enc *Encoding) DecodedLen(n int) int {
+	return 0
 }
 
 //func NewDecoder(enc *Encoding, r io.Reader) io.Reader
