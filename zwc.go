@@ -19,7 +19,6 @@ package zwc
 
 import (
 	"io"
-	//"os"
 	"unicode/utf8"
 	"github.com/snksoft/crc"
 )
