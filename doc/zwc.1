@@ -14,11 +14,11 @@
 .\"
 .\" You should have received a copy of the GNU General Public License along
 .\" with ZWC. If not, see <https://www.gnu.org/licenses/>.
-.TH ZWC 1 2023-07-30 "ZWC v0.0.1" "ZWC Manual"
+.TH ZWC 1 2023-08-16 "ZWC v0.0.1" "ZWC Manual"
 .SH NAME
 zwc \- encodes/decodes data into zero-width characters
 .SH SYNOPSIS
-\fBzwc\fR \fIsubcommand\fR [\fIargs\fR]
+\fBzwc\fR \fISUBCOMMAND\fR [\fIOPTION\fR]...
 .SH DESCRIPTION
 .PP
 \fBzwc\fR is a program for
@@ -28,33 +28,45 @@ These zero-width characters are not rendered as visible chracters.
 These zero-width characters are then placed inside a message,
 hiding the data within the message.
 .PP
-\fImessage\fR refers to the utf-8 text which will be visible to viewers.
-\fIdata\fR is the data to be encoded into zero-width utf-8 characters and
-inserted into the \fImessage\fR.
-\fItext\fR is the final product with
-the encoded \fIdata\fR hidden in the \fImessage\fR.
+\fIMESSAGE\fR refers to the utf-8 text which will be visible to viewers.
+\fIDATA\fR is the data to be encoded into zero-width utf-8 characters and
+inserted into the \fIMESSAGE\fR.
+\fITEXT\fR is the final product with
+the encoded \fIDATA\fR hidden in the \fIMESSAGE\fR.
 .SH SUBCOMMAND
 Each subcommand can be abbreviated.
 For example, \fBe\fR, \fBen\fR, \fBenc\fR, etc.
 can be used to specify the \fBencode\fR subcommand.
-.SS encode\fR [\fB\-d\fR \fIdata\fR] [\fB\-m\fR \fImessage\fR] \
-[\fB\-in\fR] [\fB\-c\fR \fIchecksum\fR] [\fB\-e\fR \fIencoding\fR]
-\fBzwc\fR takes \fIdata\fR,
+.P
+\fBencode\fR [\fB\-d\fR \fIDATA\fR] [\fB\-m\fR \fIMESSAGE\fR] \
+[\fB\-c\fR \fICHECKSUM\fR] [\fB\-e\fR \fIENCODING\fR] [\fB\-in\fR]
+.RS 4
+\fBzwc\fR takes \fIDATA\fR,
 encodes it into zero-width characters,
-and inserts it into \fImessage\fR.
+and inserts it into \fIMESSAGE\fR.
 The resulting text is sent to standard output.
-If either \fIdata\fR or \fImessage\fR are not given,
+If either \fIDATA\fR or \fIMESSAGE\fR are not given,
 it is read from stdin.
 .PP
 \fBOptions\fR
 .TP
-\fB\-d\fR \fIdata\fR
+\fB\-d\fR, \fB--data\fR \fIDATA\fR
 Specifies the data file to read from.
 .TP
-\fB\-m\fR \fImessage\fR
+\fB\-m\fR, \fB--message\fR \fIMESSAGE\fR
 Specifies the message file to read from.
 .TP
-\fB\-i\fR
+\fB\-c\fR, \fB--checksum\fR \fICHECKSUM\fR
+Specifies the checksum to use when encoding the message.
+.br
+Valid arguments are: 0 (none), 8 (for crc8), 16 (for crc16), and 32 (for crc32).
+.TP
+\fB\-e\fR, \fB--encoding\fR \fIENCODING\fR
+Choose which encoding for the data to use.
+.br
+Valid arguments are: 2, 3, 4.
+.TP
+\fB\-i\fR, \fB--interactive\fR
 When neither \fIdata\fR or \fImessage\fR are supplied,
 this option allows the user to
 interactively supply both the data and message from the terminal.
@@ -65,42 +77,65 @@ given that the data and message are separated by
 the string "EOF" on its own line
 (the data must come before the message).
 .TP
-\fB\-n\fR
+\fB\-n\fR, \fB--no-message\fR
 Do not intersperse the encoded data within a message.
-.TP
-\fB\-c\fR \fIchecksum\fR
-Specifies the checksum to use when encoding the message.
-Valid arguments are: none, 8 (for crc8), 16 (for crc16), and 32 (for crc32)
-.TP
-\fB\-e\fR \fIencoding\fR
-Choose which encoding for the data to use. Valid arguments are: 2, 3, 4.
-.SS decode\fR [\fB\-t\fR \fItext\fR] [\fB\-mc\fR] [\fB\-f\fR \fIencoding\fR]
-\fBzwc\fR takes \fItext\fR,
+.RE
+.P
+\fBdecode\fR [\fB\-t\fR \fITEXT\fR] [\fB\-cm\fR] [\fB\-f\fR {\fICHECKSUM\fR|\fIENCODING\fR}]...
+.RS 4
+\fBzwc\fR takes \fITEXT\fR,
 decodes the hidden data,
 and sends that data to standard output.
-If \fItext\fR is not given, it is read from stdin.
+If \fITEXT\fR is not given, it is read from stdin.
 .PP
 \fBOptions\fR
 .TP
-\fB\-t\fR \fItext\fR
+\fB\-t\fR, \fB--text\fR \fITEXT\fR
 Specifies the text file to read from.
 .TP
-\fB\-m\fR
-Output the message instead of the data.
-.TP
-\fB\-c\fR
+\fB\-c\fR, \fB--checksum\fR
 Output the checksum value in hexadecimal instead of the data.
 .TP
-\fB\-f\fR \fIencoding\fR
-Force \fBzwc\fR to interpret the encoding of the data as \fIencoding\fR,
+\fB\-m\fR, \fB--message\fR
+Output the message instead of the data.
+.TP
+\fB\-f\fR, \fB--force\fR {\fICHECKSUM\fR|\fIENCODING\fR}
+Force \fBzwc\fR to interpret the checksum or encoding of the data
+as \fICHECKSUM\fR or \fIENCODING\fR,
 even if the header says otherwise.
-Valid values for \fIencoding\fR are: 2, 3, 4.
-.SS test\fR [\fB\-t\fR \fItext\fR]
-Used to test the integrity of \fItext\fR.
-.SS help\fR [\fIsubcommand\fR]
+.br
+Valid values for \fICHECKSUM\fR are: 0, 8, 16, 32.
+.br
+Valid values for \fIENCODING\fR are: 2, 3, 4.
+.RE
+.P
+\fBtest\fR [\fB\-t\fR \fITEXT\fR] [{\fB-h\fR|\fB-p\fR}]
+.RS 4
+Used to test the integrity of \fITEXT\fR.
+Doesn't send any data to stdout.
+If \fITEXT\fR is not given, it is read from stdin.
+.PP
+\fBOptions\fR
+.TP
+\fB\-t\fR, \fB--text\fR \fITEXT\fR
+Specifies the text file to read from.
+.TP
+\fB-h\fR, \fB--header\fR
+Only test the integrity of the header.
+.TP
+\fB-p\fR, \fB--payload\fR
+Only test the integrity of the payload.
+.RE
+.P
+\fBhelp\fR [\fISUBCOMMAND\fR]
+.RS 4
 Display help information and subcommand usage.
-.SS version
+.RE
+.P
+\fBversion\fR
+.RS 4
 Displays program version, file format specification version, and copyright info.
+.RE
 .SH OPTIONS
 Options which are common to all subcommands.
 .TP
