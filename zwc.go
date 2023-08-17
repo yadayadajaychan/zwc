@@ -295,40 +295,36 @@ func NewEncoder(enc *Encoding, w io.Writer) io.WriteCloser {
 }
 
 func (e *encoder) Write(p []byte) (n int, err error) {
-	var nTotal int
 	if !e.header {
 		e.header = true
 
 		// write delim character
 		delimChar := e.enc.delimCharAsUTF8()
-		n, err = e.w.Write(delimChar)
-		nTotal += n
-		if err != nil {
-			return nTotal, err
+		if _, err := e.w.Write(delimChar); err != nil {
+			return 0, err
 		}
 
 		// write encoded header
 		header := make([]byte, e.enc.EncodedHeaderLen())
 		headerSize := e.enc.EncodeHeader(header)
-		n, err = e.w.Write(header[:headerSize])
-		nTotal += n
-		if err != nil {
-			return nTotal, err
+		if _, err := e.w.Write(header[:headerSize]); err != nil {
+			return 0, err
 		}
 
 		// write delim character
-		n, err = e.w.Write(delimChar);
-		nTotal += n
-		if err != nil {
-			return nTotal, err
+		if _, err := e.w.Write(delimChar); err != nil {
+			return 0, err
 		}
 	}
 
 	dst := make([]byte, e.enc.EncodedPayloadMaxLen(len(p)))
 	size := e.enc.EncodePayload(dst, p)
+
 	n, err = e.w.Write(dst[:size])
-	nTotal += n
-	return nTotal, err
+	if err != nil {
+		return n, err
+	}
+	return len(p), err
 }
 
 func (e *encoder) Close() error {

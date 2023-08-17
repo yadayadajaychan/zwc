@@ -428,7 +428,7 @@ func TestEncodeAndEncoder(t *testing.T) {
 
 // TestEncoderNumberOfBytesWritten tests that
 // the number of bytes returned by encoder.Write
-// are the actual number of bytes written
+// is the same as the input data
 func TestEncoderNumberOfBytesWritten(t *testing.T) {
 	testCases := []struct {
 		version      int
@@ -451,8 +451,8 @@ func TestEncoderNumberOfBytesWritten(t *testing.T) {
 		if err != nil {
 			t.Errorf("Write returned an error of %v", err)
 		}
-		if n != b.Len() {
-			t.Errorf("Expected %v, got %v", b.Len(), n)
+		if n != len(tc.data) {
+			t.Errorf("Expected %v, got %v", len(tc.data), n)
 		}
 	}
 }
