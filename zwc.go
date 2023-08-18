@@ -285,7 +285,6 @@ func (enc *Encoding) delimCharAsUTF8() []byte {
 }
 
 type encoder struct {
-	err    error
 	enc    *Encoding
 	w      io.Writer
 	header bool // whether or not the header has been written yet
