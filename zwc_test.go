@@ -126,7 +126,7 @@ func TestEncodeHeaderAndDecodeHeader(t *testing.T) {
 	}
 }
 
-func TestEncodePayload(t *testing.T) {
+func TestEncodePayloadAndDecodePayload(t *testing.T) {
 	testCases := []struct {
 		version		int
 		encodingType	int
@@ -183,6 +183,7 @@ func TestEncodePayload(t *testing.T) {
 					  "\xF0\x9D\x85\xB4"},
 	}
 
+	// test EncodePayload
 	for _, tc := range testCases {
 		enc := zwc.NewEncoding(tc.version, tc.encodingType,
 								tc.checksumType)
@@ -196,6 +197,24 @@ func TestEncodePayload(t *testing.T) {
 		if string(dst[:n]) != tc.expected {
 			t.Errorf("Expected %q, got %q", tc.expected,
 							string(dst[:n]))
+		}
+	}
+
+	// test DecodePayload
+	for _, tc := range testCases {
+		enc := zwc.NewEncoding(tc.version, tc.encodingType, tc.checksumType)
+
+		dst := make([]byte, enc.DecodedPayloadMaxLen(len(tc.expected)))
+		n, err := enc.DecodePayload(dst, []byte(tc.expected))
+		if err != nil {
+			t.Error("DecodePayload returned an error of", err)
+		}
+
+		if n != len(tc.data) {
+			t.Errorf("Expected %v, got %v", len(tc.data), n)
+		}
+		if !bytes.Equal(tc.data, dst[:n]) {
+			t.Errorf("Expected %q, got %q", tc.data, dst[:n])
 		}
 	}
 }
@@ -253,6 +272,23 @@ func TestEncodeChecksum(t *testing.T) {
 			t.Errorf("Expected %q, got %q", tc.expected, string(dst[:n]))
 		}
 	}
+}
+
+func TestDecodeChecksum(t *testing.T) {
+	//testCases := []struct {
+	//	version          int
+	//	encodingType     int
+	//	checksumType     int
+
+	//	encodedData      string
+	//	encodedChecksum  string
+	//	expectedChecksum uint64
+	//}{
+	//	{1, 2, 0, "", "", 0},
+	//	{1, 2, 0, "", "", 0},
+	//	{1, 2, 0, "", "", 0},
+	//	{1, 2, 0, "", "", 0},
+	//}
 }
 
 // TestEncodeAndEncoder tests the Encode method of Encoding

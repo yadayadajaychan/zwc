@@ -20,6 +20,8 @@ package zwc
 import (
 	"io"
 	"strconv"
+	"slices"
+
 	"unicode/utf8"
 	"github.com/snksoft/crc"
 )
@@ -345,6 +347,10 @@ func (e *encoder) Close() error {
 	return nil
 }
 
+//
+// Decode
+//
+
 type CorruptHeaderError struct {
 	msg          string
 	HeaderLength int // length of the decoded header in bits
@@ -352,14 +358,31 @@ type CorruptHeaderError struct {
 }
 
 func (e CorruptHeaderError) Error() string {
-	e.msg = "zwc: header is corrupt"
+	e.msg = "corrupt header: "
 
 	if e.HeaderLength < 8 {
-		e.msg += "\nzwc: header shorter than expected\n" +
-				"zwc: expected 8, got " + strconv.Itoa(e.HeaderLength)
+		e.msg += "header shorter than expected: " +
+				"expected 8, got " + strconv.Itoa(e.HeaderLength)
+	} else if e.CRCFail {
+		e.msg += "crc for header failed"
 	}
-	if e.CRCFail {
-		e.msg += "\nzwc: crc for header failed"
+
+	return e.msg
+}
+
+type CorruptPayloadError struct {
+	msg            string
+	IncompleteByte bool
+	CRCFail        bool
+}
+
+func (e CorruptPayloadError) Error() string {
+	e.msg = "corrupt payload: "
+
+	if e.IncompleteByte {
+		e.msg += "payload has incomplete byte"
+	} else if e.CRCFail {
+		e.msg += "crc for payload failed"
 	}
 
 	return e.msg
@@ -426,11 +449,126 @@ func (enc *Encoding) Decode(dst, src []byte) (n int, err error) {
 	return 0, nil
 }
 
-func (enc *Encoding) DecodedLen(n int) int {
+func (enc *Encoding) DecodePayload(dst, src []byte) (n int, err error) {
+	n, err = enc.decodeRaw(dst, src)
+	if err != nil {
+		return n, err
+	}
+
+	if enc.checksumType != 0 {
+		enc.checksum.Update(dst[:n])
+	}
+
+	return n, nil
+}
+
+// DecodeChecksum decodes the checksum in p and returns the checksum
+// If the checksum is decoded successfully and the checksum matches,
+// err is nil
+func (enc *Encoding) DecodeChecksum(p []byte) (checksum uint64, err error) {
+	if enc.checksumType == 0 {
+		return 0, nil
+	}
+
+	// TODO check if p is too large
+	checksumSlice := make([]byte, enc.checksumType/8)
+
+	n, err := enc.decodeRaw(checksumSlice, p)
+	if err != nil || n != len(checksumSlice) {
+		return 0, CorruptPayloadError{CRCFail: true}
+	}
+
+	// convert checksumSlice to uint64
+	slices.Reverse(checksumSlice)
+	for i := 0; i < len(checksumSlice); i++ {
+		checksum = checksum | uint64(checksumSlice[i])<<(i*8)
+	}
+
+	if enc.checksum.CRC() != checksum {
+		return checksum, CorruptPayloadError{CRCFail: true}
+	}
+
+	return checksum, nil
+}
+
+func (enc *Encoding) decodeRaw(dst, src []byte) (n int, err error) {
+	var output byte
+	var shift int
+
+	switch enc.encodingType {
+	case 2, 3:
+		shift = 6
+	case 4:
+		shift = 4
+	}
+
+	for _, r := range string(src) {
+		rv, ok := enc.decodeMap[r]
+		if ok {
+			output = rv<<shift | output
+			shift -= enc.encodingType
+
+			if shift < 0 {
+				dst[n] = output
+				n++
+				output = 0
+
+				switch enc.encodingType {
+				case 2, 3:
+					shift = 6
+				case 4:
+					shift = 4
+				}
+			}
+		}
+	}
+
+	switch enc.encodingType {
+	case 2, 3:
+		if shift != 6 {
+			return n, CorruptPayloadError{IncompleteByte: true}
+		}
+	case 4:
+		if shift != 4 {
+			return n, CorruptPayloadError{IncompleteByte: true}
+		}
+	}
+
+	return n, nil
+}
+
+func (enc *Encoding) DecodedPayloadMaxLen(n int) int {
+	switch enc.encodingType {
+	case 2:
+		return n / 12
+	case 3:
+		return n / 9
+	case 4:
+		return n / 6
+	}
+
 	return 0
 }
 
-//func NewDecoder(enc *Encoding, r io.Reader) io.Reader
+type decoder struct {
+	enc    *Encoding
+	r      io.Reader
+}
+
+func NewDecoder(enc *Encoding, r io.Reader) io.Reader {
+	return &decoder{enc: enc, r: r}
+}
+
+func (d *decoder) Read(p []byte) (n int, err error) {
+	return 0, nil
+}
+
+func (enc *Encoding) Checksum() []byte {
+	return nil
+}
+
+func (enc *Encoding) ResetChecksum() {
+}
 
 // CRC2 takes an augmented message
 // (6-bit message + 2-bit CRC)
