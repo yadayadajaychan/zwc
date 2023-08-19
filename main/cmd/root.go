@@ -51,5 +51,4 @@ func init() {
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.tmp.yaml)")
 	rootCmd.PersistentFlags().CountP("verbose", "v", "Verbosity")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Suppress warnings")
-	rootCmd.PersistentFlags().BoolP("silence", "s", false, "Suppress errors and warnings")
 }
