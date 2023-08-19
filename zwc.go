@@ -324,7 +324,7 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 
 	n, err = e.w.Write(dst[:size])
 	if err != nil {
-		return n, err
+		return 0, err
 	}
 	return len(p), err
 }
