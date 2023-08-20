@@ -38,33 +38,45 @@ var encodeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		dataFilename, err := cmd.Flags().GetString("data")
 		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc: error reading data flag")
 			fmt.Fprintln(os.Stderr, "zwc:", err)
 			os.Exit(2)
 		}
 
 		messageFilename, err := cmd.Flags().GetString("message")
 		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc: error reading message flag")
 			fmt.Fprintln(os.Stderr, "zwc:", err)
 			os.Exit(2)
 		}
 
 		interactive, err := cmd.Flags().GetBool("interactive")
 		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc: error reading interactive flag")
 			fmt.Fprintln(os.Stderr, "zwc:", err)
 			os.Exit(2)
 		}
 
 		noMessage, err := cmd.Flags().GetBool("no-message")
 		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc: error reading no-message flag")
 			fmt.Fprintln(os.Stderr, "zwc:", err)
 			os.Exit(2)
 		}
 
 		verbose, err := cmd.Flags().GetCount("verbose")
 		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc: error reading verbose flag")
 			fmt.Fprintln(os.Stderr, "zwc:", err)
 			os.Exit(2)
 		}
+
+		//quiet, err := cmd.Flags().GetBool("quiet")
+		//if err != nil {
+		//	fmt.Fprintln(os.Stderr, "zwc: error reading quiet flag")
+		//	fmt.Fprintln(os.Stderr, "zwc:", err)
+		//	os.Exit(2)
+		//}
 
 		// interactive has no effect if data or message are supplied
 		// or if no-message is specified
@@ -72,12 +84,22 @@ var encodeCmd = &cobra.Command{
 			interactive = false
 		}
 
-		if dataFilename == "" && messageFilename == "" && !interactive {
+		// if message is supplied, no-message has no effect
+		if messageFilename != "" {
+			noMessage = false
+		}
+
+		if noMessage && (dataFilename == "" || dataFilename == "-") {
+			dataFilename = "/dev/stdin"
+		} else if dataFilename == "" && messageFilename == "" && !interactive {
 			fmt.Fprintln(os.Stderr, "zwc: data and/or message file must be specified")
 			os.Exit(1)
-		} else if dataFilename == "" {
+		} else if dataFilename == messageFilename && !interactive {
+			fmt.Fprintln(os.Stderr, "zwc: data and message file must be different")
+			os.Exit(1)
+		} else if dataFilename == "" || dataFilename == "-" {
 			dataFilename = "/dev/stdin"
-		} else if messageFilename == "" {
+		} else if messageFilename == "" || messageFilename == "-" {
 			messageFilename = "/dev/stdin"
 		}
 
@@ -120,25 +142,27 @@ var encodeCmd = &cobra.Command{
 
 			data = &dataBuffer
 			message = &messageBuffer
+		} else if noMessage {
+			if dataFilename == "/dev/stdin" {
+				if term.IsTerminal(int(os.Stdin.Fd())) {
+					data = bufferStdin()
+				} else {
+					data = os.Stdin
+				}
+			} else {
+				data, err = os.Open(dataFilename)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "zwc:", err)
+					os.Exit(1)
+				}
+			}
 		} else if dataFilename == "/dev/stdin" && term.IsTerminal(int(os.Stdin.Fd())) {
 			// buffer data if connected to terminal
 			if verbose >= 1 {
 				fmt.Fprintln(os.Stderr, "zwc: reading data from terminal")
 			}
 
-			var dataBuffer bytes.Buffer
-
-			scanner := bufio.NewScanner(os.Stdin)
-			for scanner.Scan() {
-				dataBuffer.WriteString(scanner.Text() + "\n")
-			}
-
-			if err := scanner.Err(); err != nil {
-				fmt.Fprintf(os.Stderr, "zwc:", err)
-				os.Exit(2)
-			}
-
-			data = &dataBuffer
+			data = bufferStdin()
 
 			message, err = os.Open(messageFilename)
 			if err != nil {
@@ -151,19 +175,7 @@ var encodeCmd = &cobra.Command{
 				fmt.Fprintln(os.Stderr, "zwc: reading message from terminal")
 			}
 
-			var messageBuffer bytes.Buffer
-
-			scanner := bufio.NewScanner(os.Stdin)
-			for scanner.Scan() {
-				messageBuffer.WriteString(scanner.Text() + "\n")
-			}
-
-			if err := scanner.Err(); err != nil {
-				fmt.Fprintf(os.Stderr, "zwc:", err)
-				os.Exit(2)
-			}
-
-			message = &messageBuffer
+			message = bufferStdin()
 
 			data, err = os.Open(dataFilename)
 			if err != nil {
@@ -171,42 +183,55 @@ var encodeCmd = &cobra.Command{
 				os.Exit(1)
 			}
 		} else {
-			data, err = os.Open(dataFilename)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "zwc:", err)
-				os.Exit(1)
+			if dataFilename == "/dev/stdin" {
+				// /dev/stdin may not exist on all systems
+				data = os.Stdin
+			} else {
+				data, err = os.Open(dataFilename)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "zwc:", err)
+					os.Exit(1)
+				}
 			}
 
-			message, err = os.Open(messageFilename)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "zwc:", err)
-				os.Exit(1)
+			if messageFilename == "/dev/stdin" {
+				// /dev/stdin may not exist on all systems
+				message = os.Stdin
+			} else {
+				message, err = os.Open(messageFilename)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "zwc:", err)
+					os.Exit(1)
+				}
 			}
 		}
 
 
-		// fm holds first character from message
-		fm := make([]byte, utf8.UTFMax)
-		fmi, err := message.Read(fm[:1])
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "zwc:", err)
-			os.Exit(2)
-		}
-
-		// read more bytes if not full character
-		for !utf8.FullRune(fm[:fmi]) {
-			n, err := message.Read(fm[fmi:fmi+1])
-			fmi += n
+		var fmi int
+		if !noMessage {
+			// fm holds first character from message
+			fm := make([]byte, utf8.UTFMax)
+			fmi, err = message.Read(fm[:1])
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "zwc:", err)
 				os.Exit(2)
 			}
-		}
 
-		// write first character from message
-		if _, err := os.Stdout.Write(fm[:fmi]); err != nil {
-			fmt.Fprintln(os.Stderr, "zwc:", err)
-			os.Exit(2)
+			// read more bytes if not full character
+			for !utf8.FullRune(fm[:fmi]) {
+				n, err := message.Read(fm[fmi:fmi+1])
+				fmi += n
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "zwc:", err)
+					os.Exit(2)
+				}
+			}
+
+			// write first character from message
+			if _, err := os.Stdout.Write(fm[:fmi]); err != nil {
+				fmt.Fprintln(os.Stderr, "zwc:", err)
+				os.Exit(2)
+			}
 		}
 
 		// encode data
@@ -225,13 +250,16 @@ var encodeCmd = &cobra.Command{
 			os.Exit(2)
 		}
 
-		n, err = io.Copy(os.Stdout, message)
-		if verbose >= 3 {
-			fmt.Fprintf(os.Stderr, "zwc: %v bytes from message written\n", n + int64(fmi))
-		}
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "zwc:", err)
-			os.Exit(2)
+		if !noMessage {
+			// write rest of message
+			n, err = io.Copy(os.Stdout, message)
+			if verbose >= 3 {
+				fmt.Fprintf(os.Stderr, "zwc: %v bytes from message written\n", n + int64(fmi))
+			}
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "zwc:", err)
+				os.Exit(2)
+			}
 		}
 	},
 }
@@ -252,12 +280,14 @@ func init() {
 func createEncoding(cmd *cobra.Command) *zwc.Encoding {
 	checksum, err := cmd.Flags().GetInt("checksum")
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "zwc: error reading checksum flag")
 		fmt.Fprintln(os.Stderr, "zwc:", err)
 		os.Exit(2)
 	}
 
 	encoding, err := cmd.Flags().GetInt("encoding")
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "zwc: error reading encoding flag")
 		fmt.Fprintln(os.Stderr, "zwc:", err)
 		os.Exit(2)
 	}
@@ -279,4 +309,20 @@ func createEncoding(cmd *cobra.Command) *zwc.Encoding {
 	}
 
 	return zwc.NewEncoding(1, encoding, checksum)
+}
+
+func bufferStdin() *bytes.Buffer {
+	var buffer bytes.Buffer
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		buffer.WriteString(scanner.Text() + "\n")
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintf(os.Stderr, "zwc:", err)
+		os.Exit(2)
+	}
+
+	return &buffer
 }
