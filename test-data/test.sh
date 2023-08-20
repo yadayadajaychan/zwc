@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+SCRIPT_PATH=${0%/*}
+if [ "$0" != "$SCRIPT_PATH" ] && [ "$SCRIPT_PATH" != "" ]; then
+    cd $SCRIPT_PATH
+fi
+
 # vanilla encode
 for dir in */
 do
@@ -11,3 +16,5 @@ do
 		exit 1
 	fi
 done
+
+echo test.sh: tests passed
