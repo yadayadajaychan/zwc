@@ -64,6 +64,7 @@ type Encoding struct {
 	encodeMap    [256]string
 	decodeMap    map[rune]byte
 	checksum     *crc.Hash
+	crc          uint64
 }
 
 func NewEncoding(version, encodingType, checksumType int) *Encoding {
@@ -150,6 +151,7 @@ func NewEncodingCustom(table [16]string, delimChar rune, version, encodingType, 
 		encodeMap,
 		decodeMap,
 		checksum,
+		0,
 	}
 }
 
@@ -213,12 +215,13 @@ func (enc *Encoding) EncodeChecksum(dst []byte) int {
 		return 0
 	}
 
-	checksum := enc.checksum.CRC()
+	enc.crc = enc.checksum.CRC()
+	enc.checksum.Reset()
+
 	di := 0
 	for shift := enc.checksumType-8; shift >= 0; shift -= 8 {
-		di += copy(dst[di:], enc.encodeMap[checksum>>shift & 255])
+		di += copy(dst[di:], enc.encodeMap[enc.crc>>shift & 255])
 	}
-	enc.checksum.Reset()
 	return di
 }
 
@@ -464,19 +467,23 @@ func (enc *Encoding) DecodePayload(dst, src []byte) (n int, err error) {
 
 // DecodeChecksum decodes the checksum in p and returns the checksum
 // If the checksum is decoded successfully and the checksum matches,
-// err is nil
+// err is nil.
 func (enc *Encoding) DecodeChecksum(p []byte) (checksum uint64, err error) {
 	if enc.checksumType == 0 {
 		return 0, nil
 	}
 
-	// TODO check if p is too large
-	checksumSlice := make([]byte, enc.checksumType/8)
+	enc.crc = enc.checksum.CRC()
+	enc.checksum.Reset()
+
+	checksumSlice := make([]byte, enc.DecodedPayloadMaxLen(len(p)))
 
 	n, err := enc.decodeRaw(checksumSlice, p)
-	if err != nil || n != len(checksumSlice) {
+	if err != nil || n < enc.checksumType/8 {
 		return 0, CorruptPayloadError{CRCFail: true}
 	}
+
+	checksumSlice = checksumSlice[:enc.checksumType/8]
 
 	// convert checksumSlice to uint64
 	slices.Reverse(checksumSlice)
@@ -484,7 +491,7 @@ func (enc *Encoding) DecodeChecksum(p []byte) (checksum uint64, err error) {
 		checksum = checksum | uint64(checksumSlice[i])<<(i*8)
 	}
 
-	if enc.checksum.CRC() != checksum {
+	if enc.crc != checksum {
 		return checksum, CorruptPayloadError{CRCFail: true}
 	}
 
@@ -563,11 +570,8 @@ func (d *decoder) Read(p []byte) (n int, err error) {
 	return 0, nil
 }
 
-func (enc *Encoding) Checksum() []byte {
-	return nil
-}
-
-func (enc *Encoding) ResetChecksum() {
+func (enc *Encoding) Checksum() uint64 {
+	return enc.crc
 }
 
 // CRC2 takes an augmented message
