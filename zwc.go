@@ -20,10 +20,15 @@ package zwc
 import (
 	"io"
 	"strconv"
+	"strings"
 	"slices"
-
 	"unicode/utf8"
+
 	"github.com/snksoft/crc"
+)
+
+const (
+	V1DelimChar = '\u034F'
 )
 
 var (
@@ -88,8 +93,8 @@ func NewEncoding(version, encodingType, checksumType int) *Encoding {
 			"\xF0\x9D\x85\xB3", // 14
 			"\xF0\x9D\x85\xB4", // 15
 		}
-		delimChar := '\u034F'
-		return NewEncodingCustom(table, delimChar, version, encodingType, checksumType)
+
+		return NewEncodingCustom(table, V1DelimChar, version, encodingType, checksumType)
 	default:
 		panic("only ZWC file format version 1 is supported")
 	}
@@ -281,13 +286,14 @@ func (enc *Encoding) EncodedChecksumMaxLen() int {
 	return 0
 }
 
-// delimCharAsUTF8 is a convenience function which returns
+// DelimCharAsUTF8 is a convenience function which returns
 // the delimChar as a UTF8 encoded slice of bytes
-func (enc *Encoding) delimCharAsUTF8() []byte {
+func DelimCharAsUTF8() []byte {
 	delimChar := make([]byte, utf8.UTFMax)
-	delimCharSize := utf8.EncodeRune(delimChar, enc.delimChar)
+	delimCharSize := utf8.EncodeRune(delimChar, V1DelimChar)
 	return delimChar[:delimCharSize]
 }
+
 
 type encoder struct {
 	enc    *Encoding
@@ -304,7 +310,7 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 		e.header = true
 
 		// write delim character
-		delimChar := e.enc.delimCharAsUTF8()
+		delimChar := DelimCharAsUTF8()
 		if _, err := e.w.Write(delimChar); err != nil {
 			return 0, err
 		}
@@ -334,7 +340,7 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 
 func (e *encoder) Close() error {
 	// write delim character
-	if _, err := e.w.Write(e.enc.delimCharAsUTF8()); err != nil {
+	if _, err := e.w.Write(DelimCharAsUTF8()); err != nil {
 		return err
 	}
 
@@ -377,6 +383,7 @@ type CorruptPayloadError struct {
 	msg            string
 	IncompleteByte bool
 	CRCFail        bool
+	NoDelimChar    bool
 }
 
 func (e CorruptPayloadError) Error() string {
@@ -449,7 +456,23 @@ func GuessEncodingType(p []byte) int {
 }
 
 func (enc *Encoding) Decode(dst, src []byte) (n int, err error) {
-	return 0, nil
+	i := strings.IndexRune(string(src), enc.delimChar)
+
+	if i < 0 {
+		return 0, CorruptPayloadError{NoDelimChar: true}
+	}
+
+	n, err = enc.DecodePayload(dst, src[:i])
+	if err != nil {
+		return n, err
+	}
+
+	_, err = enc.DecodeChecksum(src[i+utf8.RuneLen(enc.delimChar):])
+	if err != nil {
+		return n, err
+	}
+
+	return n, nil
 }
 
 func (enc *Encoding) DecodePayload(dst, src []byte) (n int, err error) {

@@ -18,6 +18,7 @@ package zwc_test
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/yadayadajaychan/zwc"
@@ -336,7 +337,7 @@ func TestDecodeChecksum(t *testing.T) {
 		}
 
 		if string(tc.data) != string(dst[:n]) {
-			t.Errorf("Expected %v, got %v", tc.data, dst[:n])
+			t.Errorf("Expected %q, got %q", tc.data, dst[:n])
 		}
 
 		checksum, err := enc.DecodeChecksum([]byte(tc.encodedChecksum))
@@ -350,9 +351,10 @@ func TestDecodeChecksum(t *testing.T) {
 	}
 }
 
-// TestEncodeAndEncoder tests the Encode method of Encoding
-// and the Write and Close methods of Encoder
-func TestEncodeAndEncoder(t *testing.T) {
+// TestEncodeAndEncoderAndDecode tests the Encode method of Encoding,
+// the Write and Close methods of Encoder,
+// and the Decode method of Encoding
+func TestEncodeAndEncoderAndDecode(t *testing.T) {
 	testCases := []struct {
 		version		int
 		encodingType	int
@@ -534,6 +536,29 @@ func TestEncodeAndEncoder(t *testing.T) {
 
 		if output := b.String(); output != tc.expected {
 			t.Errorf("Expected %q, got %q", tc.expected, output)
+		}
+	}
+
+	// Decode method of Encoding
+	for _, tc := range testCases {
+		delimChar := string(zwc.DelimCharAsUTF8())
+		encoded := strings.Split(string(tc.expected), delimChar)
+
+		v, e, c, err := zwc.DecodeHeader([]byte(encoded[1]))
+		if err != nil {
+			t.Error("DecodeHeader returned an error of", err)
+		}
+
+		enc := zwc.NewEncoding(v, e, c)
+
+		dst := make([]byte, enc.DecodedPayloadMaxLen(len(tc.expected)))
+		n, err := enc.Decode(dst, []byte(encoded[2] + delimChar + encoded[3]))
+
+		if err != nil {
+			t.Error("Decode returned an error of", err)
+		}
+		if string(dst[:n]) != string(tc.data) {
+			t.Errorf("Expected %q, got %q", tc.data, dst[:n])
 		}
 	}
 }
