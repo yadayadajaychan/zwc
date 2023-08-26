@@ -29,6 +29,7 @@ import (
 
 const (
 	V1DelimChar = '\u034F'
+	V1DelimCharUTF8 = "\xcd\x8f"
 )
 
 var (
@@ -288,9 +289,9 @@ func (enc *Encoding) EncodedChecksumMaxLen() int {
 
 // DelimCharAsUTF8 is a convenience function which returns
 // the delimChar as a UTF8 encoded slice of bytes
-func DelimCharAsUTF8() []byte {
+func (enc *Encoding) DelimCharAsUTF8() []byte {
 	delimChar := make([]byte, utf8.UTFMax)
-	delimCharSize := utf8.EncodeRune(delimChar, V1DelimChar)
+	delimCharSize := utf8.EncodeRune(delimChar, enc.delimChar)
 	return delimChar[:delimCharSize]
 }
 
@@ -310,7 +311,7 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 		e.header = true
 
 		// write delim character
-		delimChar := DelimCharAsUTF8()
+		delimChar := e.enc.DelimCharAsUTF8()
 		if _, err := e.w.Write(delimChar); err != nil {
 			return 0, err
 		}
@@ -340,7 +341,7 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 
 func (e *encoder) Close() error {
 	// write delim character
-	if _, err := e.w.Write(DelimCharAsUTF8()); err != nil {
+	if _, err := e.w.Write(e.enc.DelimCharAsUTF8()); err != nil {
 		return err
 	}
 
@@ -380,15 +381,19 @@ func (e CorruptHeaderError) Error() string {
 }
 
 type CorruptPayloadError struct {
-	msg            string
-	IncompleteByte bool
-	CRCFail        bool
-	NoDelimChar    bool
+	msg                 string
+	NotValidUTF8        bool // payload contains no utf8 characters
+	IncompleteByte      bool // decoding resulted in an incomplete byte
+	ShortCRC            bool // decoded crc is too short
+	CRCFail             bool // checksum doesn't match calculated crc
+	NoDelimChar         bool // no delim char between payload and checksum
+	UnexpectedDelimChar bool // delim char after checksum (use NewCatDecoder)
 }
 
 func (e CorruptPayloadError) Error() string {
 	e.msg = "corrupt payload: "
 
+	// TODO more fields
 	if e.IncompleteByte {
 		e.msg += "payload has incomplete byte"
 	} else if e.CRCFail {
@@ -455,55 +460,49 @@ func GuessEncodingType(p []byte) int {
 	return encodingType
 }
 
-func (enc *Encoding) Decode(dst, src []byte) (n int, err error) {
+func (enc *Encoding) Decode(dst, src []byte) (n, m int, err error) {
 	i := strings.IndexRune(string(src), enc.delimChar)
 
 	if i < 0 {
-		return 0, CorruptPayloadError{NoDelimChar: true}
+		return 0, 0, CorruptPayloadError{NoDelimChar: true}
 	}
 
-	n, err = enc.DecodePayload(dst, src[:i])
+	n, m, err = enc.DecodePayload(dst, src[:i])
 	if err != nil {
-		return n, err
+		return n, m, err
 	}
 
-	_, err = enc.DecodeChecksum(src[i+utf8.RuneLen(enc.delimChar):])
-	if err != nil {
-		return n, err
-	}
+	_, mm, err := enc.DecodeChecksum(src[i+utf8.RuneLen(enc.delimChar):])
 
-	return n, nil
+	return n, m + mm + utf8.RuneLen(enc.delimChar), err
 }
 
-func (enc *Encoding) DecodePayload(dst, src []byte) (n int, err error) {
-	n, err = enc.decodeRaw(dst, src)
-	if err != nil {
-		return n, err
-	}
+func (enc *Encoding) DecodePayload(dst, src []byte) (n, m int, err error) {
+	n, m, err = enc.decodeRaw(dst, src)
 
 	if enc.checksumType != 0 {
 		enc.checksum.Update(dst[:n])
 	}
 
-	return n, nil
+	return n, m, err
 }
 
 // DecodeChecksum decodes the checksum in p and returns the checksum
 // If the checksum is decoded successfully and the checksum matches,
 // err is nil.
-func (enc *Encoding) DecodeChecksum(p []byte) (checksum uint64, err error) {
+func (enc *Encoding) DecodeChecksum(p []byte) (checksum uint64, m int, err error) {
 	if enc.checksumType == 0 {
-		return 0, nil
+		return 0, 0, nil
 	}
-
-	enc.crc = enc.checksum.CRC()
-	enc.checksum.Reset()
 
 	checksumSlice := make([]byte, enc.DecodedPayloadMaxLen(len(p)))
 
-	n, err := enc.decodeRaw(checksumSlice, p)
-	if err != nil || n < enc.checksumType/8 {
-		return 0, CorruptPayloadError{CRCFail: true}
+	n, m, err := enc.decodeRaw(checksumSlice, p)
+	if err != nil {
+		return 0, m, err
+	}
+	if n < enc.checksumType/8 {
+		return 0, m, CorruptPayloadError{ShortCRC: true}
 	}
 
 	checksumSlice = checksumSlice[:enc.checksumType/8]
@@ -514,14 +513,19 @@ func (enc *Encoding) DecodeChecksum(p []byte) (checksum uint64, err error) {
 		checksum = checksum | uint64(checksumSlice[i])<<(i*8)
 	}
 
+	enc.crc = enc.checksum.CRC()
+	enc.checksum.Reset()
+
 	if enc.crc != checksum {
-		return checksum, CorruptPayloadError{CRCFail: true}
+		return checksum, m, CorruptPayloadError{CRCFail: true}
 	}
 
-	return checksum, nil
+	return checksum, m, nil
 }
 
-func (enc *Encoding) decodeRaw(dst, src []byte) (n int, err error) {
+// n is number of bytes written to dst.
+// m is the number of bytes processed from src.
+func (enc *Encoding) decodeRaw(dst, src []byte) (n, m int, err error) {
 	var output byte
 	var shift int
 
@@ -532,7 +536,7 @@ func (enc *Encoding) decodeRaw(dst, src []byte) (n int, err error) {
 		shift = 4
 	}
 
-	for _, r := range string(src) {
+	for i, r := range string(src) {
 		rv, ok := enc.decodeMap[r]
 		if ok {
 			output = rv<<shift | output
@@ -540,8 +544,9 @@ func (enc *Encoding) decodeRaw(dst, src []byte) (n int, err error) {
 
 			if shift < 0 {
 				dst[n] = output
-				n++
 				output = 0
+				n++
+				m = i + utf8.RuneLen(r)
 
 				switch enc.encodingType {
 				case 2, 3:
@@ -556,15 +561,15 @@ func (enc *Encoding) decodeRaw(dst, src []byte) (n int, err error) {
 	switch enc.encodingType {
 	case 2, 3:
 		if shift != 6 {
-			return n, CorruptPayloadError{IncompleteByte: true}
+			return n, m, CorruptPayloadError{IncompleteByte: true}
 		}
 	case 4:
 		if shift != 4 {
-			return n, CorruptPayloadError{IncompleteByte: true}
+			return n, m, CorruptPayloadError{IncompleteByte: true}
 		}
 	}
 
-	return n, nil
+	return n, m, nil
 }
 
 func (enc *Encoding) DecodedPayloadMaxLen(n int) int {
@@ -580,9 +585,25 @@ func (enc *Encoding) DecodedPayloadMaxLen(n int) int {
 	return 0
 }
 
+func (enc *Encoding) encodedMinLen(n int) int {
+	switch enc.encodingType {
+	case 2:
+		return n * 12
+	case 3:
+		return n * 9
+	case 4:
+		return n * 6
+	}
+
+	return 0
+}
+
 type decoder struct {
-	enc    *Encoding
-	r      io.Reader
+	enc             *Encoding
+	r               io.Reader
+	buf             []byte // input buffer
+	delim           bool
+	encodedChecksum []byte
 }
 
 func NewDecoder(enc *Encoding, r io.Reader) io.Reader {

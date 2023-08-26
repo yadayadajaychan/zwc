@@ -206,13 +206,16 @@ func TestEncodePayloadAndDecodePayload(t *testing.T) {
 		enc := zwc.NewEncoding(tc.version, tc.encodingType, tc.checksumType)
 
 		dst := make([]byte, enc.DecodedPayloadMaxLen(len(tc.expected)))
-		n, err := enc.DecodePayload(dst, []byte(tc.expected))
+		n, m, err := enc.DecodePayload(dst, []byte(tc.expected))
 		if err != nil {
 			t.Error("DecodePayload returned an error of", err)
 		}
 
 		if n != len(tc.data) {
 			t.Errorf("Expected %v, got %v", len(tc.data), n)
+		}
+		if m != len(tc.expected) {
+			t.Errorf("Expected %v, got %v", len(tc.expected), m)
 		}
 		if !bytes.Equal(tc.data, dst[:n]) {
 			t.Errorf("Expected %q, got %q", tc.data, dst[:n])
@@ -328,23 +331,28 @@ func TestDecodeChecksum(t *testing.T) {
 		enc := zwc.NewEncoding(tc.version, tc.encodingType, tc.checksumType)
 
 		dst := make([]byte, enc.DecodedPayloadMaxLen(len(tc.encodedData)))
-		n, err := enc.DecodePayload(dst, []byte(tc.encodedData))
+		n, m, err := enc.DecodePayload(dst, []byte(tc.encodedData))
 		if err != nil {
 			t.Error("DecodePayload returned an error of", err)
 		}
 		if n != len(tc.data) {
 			t.Errorf("Expected %v, got %v", len(tc.data), n)
 		}
+		if m != len(tc.encodedData) {
+			t.Errorf("Expected %v, got %v", len(tc.encodedData), m)
+		}
 
 		if string(tc.data) != string(dst[:n]) {
 			t.Errorf("Expected %q, got %q", tc.data, dst[:n])
 		}
 
-		checksum, err := enc.DecodeChecksum([]byte(tc.encodedChecksum))
+		checksum, m, err := enc.DecodeChecksum([]byte(tc.encodedChecksum))
 		if err != nil {
 			t.Error("DecodeChecksum returned an error of", err)
 		}
-
+		if m != len(tc.encodedChecksum) {
+			t.Errorf("Expected %v, got %v", len(tc.encodedChecksum), m)
+		}
 		if checksum != tc.expectedChecksum {
 			t.Errorf("Expected %v, got %v", tc.expectedChecksum, checksum)
 		}
@@ -541,7 +549,7 @@ func TestEncodeAndEncoderAndDecode(t *testing.T) {
 
 	// Decode method of Encoding
 	for _, tc := range testCases {
-		delimChar := string(zwc.DelimCharAsUTF8())
+		delimChar := string(zwc.V1DelimCharUTF8)
 		encoded := strings.Split(string(tc.expected), delimChar)
 
 		v, e, c, err := zwc.DecodeHeader([]byte(encoded[1]))
@@ -552,10 +560,16 @@ func TestEncodeAndEncoderAndDecode(t *testing.T) {
 		enc := zwc.NewEncoding(v, e, c)
 
 		dst := make([]byte, enc.DecodedPayloadMaxLen(len(tc.expected)))
-		n, err := enc.Decode(dst, []byte(encoded[2] + delimChar + encoded[3]))
+		n, m, err := enc.Decode(dst, []byte(encoded[2] + delimChar + encoded[3]))
 
 		if err != nil {
 			t.Error("Decode returned an error of", err)
+		}
+		if n != len(tc.data) {
+			t.Errorf("Expected %v, got %v", len(tc.data), n)
+		}
+		if m != len([]byte(encoded[2] + delimChar + encoded[3])) {
+			t.Errorf("Expected %v, got %v", len([]byte(encoded[2] + delimChar + encoded[3])), m)
 		}
 		if string(dst[:n]) != string(tc.data) {
 			t.Errorf("Expected %q, got %q", tc.data, dst[:n])
