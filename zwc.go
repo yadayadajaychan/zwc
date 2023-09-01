@@ -95,13 +95,13 @@ func NewEncoding(version, encodingType, checksumType int) *Encoding {
 			"\xF0\x9D\x85\xB4", // 15
 		}
 
-		return NewEncodingCustom(table, V1DelimChar, version, encodingType, checksumType)
+		return NewCustomEncoding(table, V1DelimChar, version, encodingType, checksumType)
 	default:
 		panic("only ZWC file format version 1 is supported")
 	}
 }
 
-func NewEncodingCustom(table [16]string, delimChar rune, version, encodingType, checksumType int) *Encoding {
+func NewCustomEncoding(table [16]string, delimChar rune, version, encodingType, checksumType int) *Encoding {
 	// sanity checks
 	if version != 1 {
 		panic("only ZWC file format version 1 is supported")
@@ -111,6 +111,14 @@ func NewEncodingCustom(table [16]string, delimChar rune, version, encodingType, 
 	}
 	if !(0 <= checksumType && checksumType <= 32 && checksumType%8 == 0) {
 		panic("checksumType must be either 0, 8, 16, or 32")
+	}
+	if !utf8.ValidRune(delimChar) {
+		panic("delimChar is illegal rune")
+	}
+	for i, v := range table {
+		if !utf8.ValidString(v) {
+			panic("invalid string in table at index " + strconv.Itoa(i))
+		}
 	}
 
 	//generate lookup table for encoding
