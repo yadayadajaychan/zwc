@@ -421,6 +421,12 @@ func (e CorruptPayloadError) Error() string {
 	return e.msg
 }
 
+// DecodeHeader takes an encoded header
+// without any delim chars and
+// returns the encoding settings for
+// the payload and checksum.
+// These can then be passed to NewEncoding to
+// create an Encoding.
 func DecodeHeader(src []byte) (version, encodingType, checksumType int, err error) {
 	enc := NewEncoding(1, 2, 0)
 
@@ -478,6 +484,13 @@ func GuessEncodingType(p []byte) int {
 	return encodingType
 }
 
+// Decode decodes the data + delim + checksum in src
+// and writes it to dst.
+// This function can only be used after
+// decoding the header with DecodeHeader and
+// creating an Encoding.
+// n is the number of bytes written to dst and
+// m is the number of bytes read from src.
 func (enc *Encoding) Decode(dst, src []byte) (n, m int, err error) {
 	i := strings.IndexRune(string(src), enc.delimChar)
 
@@ -495,6 +508,10 @@ func (enc *Encoding) Decode(dst, src []byte) (n, m int, err error) {
 	return n, m + mm + utf8.RuneLen(enc.delimChar), err
 }
 
+// DecodePayload decodes the payload in src
+// and writes it to dst.
+// n is the number of bytes written to dst and
+// m is the number of bytes read from src.
 func (enc *Encoding) DecodePayload(dst, src []byte) (n, m int, err error) {
 	n, m, err = enc.decodeRaw(dst, src)
 
@@ -505,9 +522,10 @@ func (enc *Encoding) DecodePayload(dst, src []byte) (n, m int, err error) {
 	return n, m, err
 }
 
-// DecodeChecksum decodes the checksum in p and returns the checksum
+// DecodeChecksum decodes the checksum in p and returns the checksum.
 // If the checksum is decoded successfully and the checksum matches,
 // err is nil.
+// m is the number of bytes read from p.
 func (enc *Encoding) DecodeChecksum(p []byte) (checksum uint64, m int, err error) {
 	if enc.checksumType == 0 {
 		return 0, 0, nil
@@ -599,6 +617,9 @@ func (enc *Encoding) decodeRaw(dst, src []byte) (n, m int, err error) {
 	return n, m, nil
 }
 
+// DecodedPayloadMaxLen returns
+// the maximum length of the decoded payload
+// where n is the length of the encoded payload
 func (enc *Encoding) DecodedPayloadMaxLen(n int) int {
 	switch enc.encodingType {
 	case 2:
@@ -625,6 +646,26 @@ func (enc *Encoding) encodedMinLen(n int) int {
 	return 0
 }
 
+type decoder struct {
+	enc *Encoding
+	r   io.Reader
+}
+
+// NewDecoder creates a decoder which
+// decodes the header from r,
+// therefore it doesn't require an Encoding.
+// It takes the entirety of the encoded data and
+// no preprocessing is need.
+// If you want to override the encoding settings
+// use NewCustomDecoder.
+func NewDecoder(r io.Reader) io.Reader {
+	return &decoder{r:r}
+}
+
+func (d *decoder) Read(p []byte) (n int, err error) {
+	return 0, nil
+}
+
 type customDecoder struct {
 	enc             *Encoding
 	r               io.Reader
@@ -633,6 +674,9 @@ type customDecoder struct {
 	encodedChecksum []byte
 }
 
+// NewCustomDecoder requires an Encoding,
+// meaning the header must be decoded beforehand.
+// r must contain only the data + delim + checksum
 func NewCustomDecoder(enc *Encoding, r io.Reader) io.Reader {
 	return &customDecoder{enc: enc, r: r}
 }
