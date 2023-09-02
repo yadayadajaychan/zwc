@@ -506,9 +506,18 @@ func (enc *Encoding) DecodeChecksum(p []byte) (checksum uint64, m int, err error
 	checksumSlice := make([]byte, enc.DecodedPayloadMaxLen(len(p)))
 
 	n, m, err := enc.decodeRaw(checksumSlice, p)
-	if err != nil {
+
+	v, ok := err.(CorruptPayloadError)
+	if ok {
+		if v.IncompleteByte {
+			return 0, m, CorruptPayloadError{ShortCRC: true}
+		} else {
+			return 0, m, err
+		}
+	} else if err != nil {
 		return 0, m, err
 	}
+
 	if n < enc.checksumType/8 {
 		return 0, m, CorruptPayloadError{ShortCRC: true}
 	}
@@ -606,7 +615,7 @@ func (enc *Encoding) encodedMinLen(n int) int {
 	return 0
 }
 
-type decoder struct {
+type customDecoder struct {
 	enc             *Encoding
 	r               io.Reader
 	buf             []byte // input buffer
@@ -614,11 +623,136 @@ type decoder struct {
 	encodedChecksum []byte
 }
 
-func NewDecoder(enc *Encoding, r io.Reader) io.Reader {
-	return &decoder{enc: enc, r: r}
+func NewCustomDecoder(enc *Encoding, r io.Reader) io.Reader {
+	return &customDecoder{enc: enc, r: r}
 }
 
-func (d *decoder) Read(p []byte) (n int, err error) {
+func (d *customDecoder) Read(p []byte) (n int, err error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+
+	src := make([]byte, d.enc.encodedMinLen(len(p)) - len(d.buf))
+	si, readErr := d.r.Read(src)
+
+	if si == 0 {
+		if !d.delim && readErr == io.EOF {
+			return 0, CorruptPayloadError{NoDelimChar: true}
+		} else {
+			return 0, readErr
+		}
+	}
+
+	// append new data to end of buffer and delete buffer
+	if d.buf != nil {
+		slices.Reverse(d.buf)
+		src = append(d.buf, src...)
+		si += len(d.buf)
+		d.buf = nil
+	}
+
+	// check if last character is complete and add to buffer if not
+	for r, _ := utf8.DecodeLastRune(src[:si]); r == utf8.RuneError; {
+		si--
+		if si < 0 {
+			return 0, nil
+		}
+		d.buf = append(d.buf, src[si])
+		r, _ = utf8.DecodeLastRune(src[:si])
+	}
+
+	// get index of delim character
+	di := strings.IndexRune(string(src[:si]), d.enc.delimChar)
+
+	if di > -1 {
+		if d.delim { // delim char already seen
+			return 0, CorruptPayloadError{UnexpectedDelimChar: true}
+		} else {
+			d.delim = true
+		}
+	} else { // no delim char
+		di = si
+	}
+
+	if !d.delim || di != si { // src either contains only payload or payload + delim + checksum
+		var m int
+		n, m, err = d.enc.DecodePayload(p, src[:di])
+
+		v, ok := err.(CorruptPayloadError)
+		if ok {
+			// buffer unread bytes
+			if v.IncompleteByte {
+				tmp := src[m:di]
+				slices.Reverse(tmp)
+				d.buf = append(d.buf, tmp...)
+			} else {
+				return n, err
+			}
+		} else if err != nil {
+			return n, err
+		}
+
+		if di != si { // delim char exists
+			if d.buf != nil { // buffer not empty
+				return n, CorruptPayloadError{IncompleteByte: true}
+			}
+
+			ddi := di + utf8.RuneLen(d.enc.delimChar)
+			if ddi < si { // delim char is not the last character
+				d.encodedChecksum = append(d.encodedChecksum, src[ddi:si]...)
+				_, _, err = d.enc.DecodeChecksum(d.encodedChecksum)
+
+				v, ok = err.(CorruptPayloadError)
+				if ok {
+					if v.ShortCRC {
+						if readErr == io.EOF {
+							return n, err
+						}
+					} else {
+						return n, err
+					}
+				} else if err != nil {
+					return n, err
+				}
+			}
+		}
+	} else { // src contains only checksum
+		d.encodedChecksum = append(d.encodedChecksum, src[:si]...)
+		_, _, err = d.enc.DecodeChecksum(d.encodedChecksum)
+
+		v, ok := err.(CorruptPayloadError)
+		if ok {
+			if v.ShortCRC {
+				if readErr == io.EOF {
+					return n, err
+				}
+			} else {
+				return n, err
+			}
+		} else if err != nil {
+			return n, err
+		}
+	}
+
+	if !d.delim && readErr == io.EOF {
+		return n, CorruptPayloadError{NoDelimChar: true}
+	}
+
+	return n, readErr
+}
+
+type catDecoder struct {
+	enc             *Encoding
+	r               io.Reader
+	checksum        bool
+	encodedChecksum []byte
+}
+
+func NewCatDecoder(r io.Reader) io.Reader {
+	return &catDecoder{r: r}
+}
+
+func (d *catDecoder) Read(p []byte) (n int, err error) {
 	return 0, nil
 }
 
