@@ -357,6 +357,9 @@ func TestDecodeChecksum(t *testing.T) {
 		if checksum != tc.expectedChecksum {
 			t.Errorf("Expected %v, got %v", tc.expectedChecksum, checksum)
 		}
+		if enc.Checksum() != tc.expectedChecksum {
+			t.Errorf("Expected %v, got %v", tc.expectedChecksum, enc.Checksum())
+		}
 	}
 }
 
