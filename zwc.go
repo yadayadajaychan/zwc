@@ -401,11 +401,21 @@ type CorruptPayloadError struct {
 func (e CorruptPayloadError) Error() string {
 	e.msg = "corrupt payload: "
 
-	// TODO more fields
-	if e.IncompleteByte {
-		e.msg += "payload has incomplete byte"
-	} else if e.CRCFail {
+	switch {
+	case e.NotValidUTF8:
+		e.msg += "payload contains non-valid UTF-8"
+	case e.IncompleteByte:
+		e.msg += "payload contains incomplete byte"
+	case e.ShortCRC:
+		e.msg += "crc is too short"
+	case e.CRCFail:
 		e.msg += "crc for payload failed"
+	case e.NoDelimChar:
+		e.msg += "missing delim char"
+	case e.UnexpectedDelimChar:
+		e.msg += "unexpected delim char"
+	default:
+		e.msg += "unknown error"
 	}
 
 	return e.msg
