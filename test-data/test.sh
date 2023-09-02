@@ -5,7 +5,11 @@ if [ "$0" != "$SCRIPT_PATH" ] && [ "$SCRIPT_PATH" != "" ]; then
     cd $SCRIPT_PATH
 fi
 
-go build -o zwc ../main/main.go
+export GOCOVERDIR="test-coverage"
+rm -r test-coverage
+mkdir test-coverage
+
+go build -cover -o zwc ../main/main.go
 
 # vanilla encode
 for dir in vanilla/*/
@@ -20,7 +24,6 @@ do
 done
 
 ## data from stdin
-
 for dir in vanilla/*/
 do
 	source ${dir}/parameters
@@ -33,7 +36,6 @@ do
 done
 
 ## message from stdin
-
 for dir in vanilla/*/
 do
 	source ${dir}/parameters
@@ -58,7 +60,6 @@ do
 done
 
 ## data from stdin
-
 for dir in no-message/*/
 do
 	source ${dir}/parameters
@@ -73,3 +74,5 @@ done
 rm zwc
 
 echo test.sh: all tests passed
+
+go tool covdata percent -i=test-coverage
