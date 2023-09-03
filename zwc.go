@@ -666,38 +666,7 @@ func NewDecoder(r io.Reader) io.Reader {
 func (d *decoder) Read(p []byte) (n int, err error) {
 	if d.cd == nil { // header hasn't been decoded yet
 		// decode header
-		var encodedHeader []byte
-		char := make([]byte, utf8.UTFMax)
-		var delimCount int
-		for {
-			// read one character into char
-			var i int
-			for i == 0 || !utf8.Valid(char) {
-				n, err = d.r.Read(char[i:i+1])
-				i += n
-				if err != nil {
-					return 0, err
-				}
-			}
-
-			c, _ := utf8.DecodeRune(char[:i])
-			if c == V1DelimChar {
-				delimCount += 1
-				if delimCount >= 2 {
-					break
-				}
-			} else if delimCount == 1 {
-				encodedHeader = append(encodedHeader, char[:i]...)
-			}
-
-			// zero the slice
-			for i := range char {
-				char[i] = 0
-			}
-			i = 0
-		}
-
-		v, e, c, err := DecodeHeader(encodedHeader)
+		v, e, c, err := DecodeHeaderFromReader(d.r)
 		if err != nil {
 			return 0, err
 		}
@@ -707,6 +676,41 @@ func (d *decoder) Read(p []byte) (n int, err error) {
 	}
 
 	return d.cd.Read(p)
+}
+
+func DecodeHeaderFromReader(r io.Reader) (version, encodingType, checksumType int, err error) {
+	var encodedHeader []byte
+	char := make([]byte, utf8.UTFMax)
+	var delimCount int
+	for {
+		// read one character into char
+		var i int
+		for i == 0 || !utf8.Valid(char) {
+			n, err := r.Read(char[i:i+1])
+			i += n
+			if err != nil {
+				return 0, 0, 0, err
+			}
+		}
+
+		c, _ := utf8.DecodeRune(char[:i])
+		if c == V1DelimChar {
+			delimCount += 1
+			if delimCount >= 2 {
+				break
+			}
+		} else if delimCount == 1 {
+			encodedHeader = append(encodedHeader, char[:i]...)
+		}
+
+		// zero the slice
+		for i := range char {
+			char[i] = 0
+		}
+		i = 0
+	}
+
+	return DecodeHeader(encodedHeader)
 }
 
 type customDecoder struct {
