@@ -647,8 +647,8 @@ func (enc *Encoding) encodedMinLen(n int) int {
 }
 
 type decoder struct {
-	enc *Encoding
-	r   io.Reader
+	r  io.Reader
+	cd io.Reader
 }
 
 // NewDecoder creates a decoder which
@@ -663,15 +663,57 @@ func NewDecoder(r io.Reader) io.Reader {
 }
 
 func (d *decoder) Read(p []byte) (n int, err error) {
-	return 0, nil
+	if d.cd == nil { // header hasn't been decoded yet
+		// decode header
+		var encodedHeader []byte
+		char := make([]byte, utf8.UTFMax)
+		var delimCount int
+		for {
+			// read one character into char
+			var i int
+			for i == 0 || !utf8.Valid(char) {
+				n, err = d.r.Read(char[i:i+1])
+				i += n
+				if err != nil {
+					return 0, err
+				}
+			}
+
+			c, _ := utf8.DecodeRune(char[:i])
+			if c == V1DelimChar {
+				delimCount += 1
+				if delimCount >= 2 {
+					break
+				}
+			} else if delimCount == 1 {
+				encodedHeader = append(encodedHeader, char[:i]...)
+			}
+
+			// zero the slice
+			for i := range char {
+				char[i] = 0
+			}
+			i = 0
+		}
+
+		v, e, c, err := DecodeHeader(encodedHeader)
+		if err != nil {
+			return 0, err
+		}
+
+		enc := NewEncoding(v, e, c)
+		d.cd = NewCustomDecoder(enc, d.r)
+	}
+
+	return d.cd.Read(p)
 }
 
 type customDecoder struct {
 	enc             *Encoding
 	r               io.Reader
 	buf             []byte // input buffer
-	delim           bool
-	encodedChecksum []byte
+	delim           bool   // delim char has been encountered
+	encodedChecksum []byte // buffer for encoded checksum
 }
 
 // NewCustomDecoder requires an Encoding,

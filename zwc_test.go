@@ -363,10 +363,11 @@ func TestDecodeChecksum(t *testing.T) {
 	}
 }
 
-// TestEncodeAndEncoderAndDecode tests the Encode method of Encoding,
-// the Write and Close methods of Encoder,
-// and the Decode method of Encoding
-func TestEncodeAndEncoderAndDecode(t *testing.T) {
+// TestEncodeAndEncoderAndDecodeAndDecoder tests the Encode method of Encoding,
+// the Write and Close methods of encoder,
+// the Decode method of Encoding,
+// and the Read method of decoder and customDecoder
+func TestEncodeAndEncoderAndDecodeAndDecoder(t *testing.T) {
 	testCases := []struct {
 		version		int
 		encodingType	int
@@ -617,7 +618,34 @@ func TestEncodeAndEncoderAndDecode(t *testing.T) {
 		}
 	}
 
+	// Read method of decoder
+	for i, tc := range testCases {
+		r := bytes.NewBufferString(tc.expected)
+		d := zwc.NewDecoder(r)
 
+		p := make([]byte, 2)
+		var data []byte
+
+		var n int
+		var err error
+		for {
+			n, err = d.Read(p)
+			data = append(data, p[:n]...)
+			if err != nil {
+				break
+			}
+		}
+
+		if err != io.EOF {
+			t.Error("testcase", i, ": Read returned an error of", err)
+		}
+		if len(data) != len(tc.data) {
+			t.Errorf("Expected %v, got %v", len(tc.data), len(data))
+		}
+		if string(data) != string(tc.data) {
+			t.Errorf("Expected %q, got %q", tc.data, data)
+		}
+	}
 }
 
 // TestEncoderNumberOfBytesWritten tests that
