@@ -40,6 +40,13 @@ var decodeCmd = &cobra.Command{
 			os.Exit(2)
 		}
 
+		verbose, err := cmd.Flags().GetCount("verbose")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc: error reading verbose flag")
+			fmt.Fprintln(os.Stderr, "zwc:", err)
+			os.Exit(2)
+		}
+
 		if textFilename == "" || textFilename == "-" {
 			textFilename = "/dev/stdin"
 		}
@@ -62,7 +69,9 @@ var decodeCmd = &cobra.Command{
 		decoder := zwc.NewDecoder(text)
 
 		n, err := io.Copy(os.Stdout, decoder)
-		fmt.Fprintf(os.Stderr, "zwc: %v bytes decoded\n", n)
+		if verbose >= 3 {
+			fmt.Fprintf(os.Stderr, "zwc: %v bytes decoded\n", n)
+		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "zwc:", err)
 			os.Exit(2)
