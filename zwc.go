@@ -422,7 +422,7 @@ func (e CorruptPayloadError) Error() string {
 }
 
 // DecodeHeader takes an encoded header
-// without any delim chars and
+// with or without any delim chars and
 // returns the encoding settings for
 // the payload and checksum.
 // These can then be passed to NewEncoding to
@@ -437,10 +437,11 @@ func DecodeHeader(src []byte) (version, encodingType, checksumType int, err erro
 			break
 		}
 
-		n := enc.decodeMap[char]
-		header = header | n<<i
-
-		i -= 2
+		n, ok := enc.decodeMap[char]
+		if ok {
+			header = header | n<<i
+			i -= 2
+		}
 	}
 
 	// less than 4 runes were read from src
