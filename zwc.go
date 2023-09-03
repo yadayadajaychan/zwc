@@ -101,16 +101,45 @@ func NewEncoding(version, encodingType, checksumType int) *Encoding {
 	}
 }
 
+type InvalidEncodingError struct {
+	msg                 string
+	InvalidVersion      bool
+	InvalidEncodingType bool
+	InvalidChecksumType bool
+}
+
+func (e InvalidEncodingError) Error() string{
+	e.msg = "invalid encoding: "
+
+	switch {
+	case e.InvalidVersion:
+		e.msg += "only ZWC file format version 1 is supported"
+	case e.InvalidEncodingType:
+		e.msg += "encodingType must be either 2, 3, or 4"
+	case e.InvalidChecksumType:
+		e.msg += "checksumType must be either 0, 8, 16, or 32"
+	}
+
+	return e.msg
+}
+
+func ValidEncoding(version, encodingType, checksumType int) (err error) {
+	switch {
+	case version != 1:
+		err = InvalidEncodingError{InvalidVersion: true}
+	case !(2 <= encodingType && encodingType <= 4):
+		err = InvalidEncodingError{InvalidEncodingType: true}
+	case !(0 <= checksumType && checksumType <= 32 && checksumType%8 == 0):
+		err = InvalidEncodingError{InvalidChecksumType: true}
+	}
+
+	return err
+}
+
 func NewCustomEncoding(table [16]string, delimChar rune, version, encodingType, checksumType int) *Encoding {
 	// sanity checks
-	if version != 1 {
-		panic("only ZWC file format version 1 is supported")
-	}
-	if !(2 <= encodingType && encodingType <= 4) {
-		panic("encodingType must be either 2, 3, or 4")
-	}
-	if !(0 <= checksumType && checksumType <= 32 && checksumType%8 == 0) {
-		panic("checksumType must be either 0, 8, 16, or 32")
+	if err := ValidEncoding(version, encodingType, checksumType); err != nil {
+		panic(err)
 	}
 	if !utf8.ValidRune(delimChar) {
 		panic("delimChar is illegal rune")
@@ -372,7 +401,7 @@ func (e *encoder) Close() error {
 type CorruptHeaderError struct {
 	msg          string
 	HeaderLength int // length of the decoded header in bits
-	CRCFail      bool // whether or not the crc failed
+	CRCFail      bool // crc failed
 }
 
 func (e CorruptHeaderError) Error() string {
@@ -464,7 +493,9 @@ func DecodeHeader(src []byte) (version, encodingType, checksumType int, err erro
 		checksumType = 32
 	}
 
-	return version, encodingType, checksumType, nil
+	err = ValidEncoding(version, encodingType, checksumType)
+
+	return version, encodingType, checksumType, err
 }
 
 // GuessEncodingType uses heuristics to guess the encoding of the payload
