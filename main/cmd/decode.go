@@ -18,8 +18,12 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
 
+	"github.com/yadayadajaychan/zwc"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // decodeCmd represents the decode command
@@ -29,20 +33,50 @@ var decodeCmd = &cobra.Command{
 	Aliases: []string{"d", "de", "dec", "deco", "decod"},
 
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("decode called")
+		textFilename, err := cmd.Flags().GetString("text")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc: error reading text flag")
+			fmt.Fprintln(os.Stderr, "zwc:", err)
+			os.Exit(2)
+		}
+
+		if textFilename == "" || textFilename == "-" {
+			textFilename = "/dev/stdin"
+		}
+
+		var text io.Reader
+		if textFilename == "/dev/stdin" {
+			if term.IsTerminal(int(os.Stdin.Fd())) {
+				text = bufferStdin()
+			} else {
+				text = os.Stdin
+			}
+		} else {
+			text, err = os.Open(textFilename)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "zwc: ", err)
+				os.Exit(1)
+			}
+		}
+
+		decoder := zwc.NewDecoder(text)
+
+		n, err := io.Copy(os.Stdout, decoder)
+		fmt.Fprintf(os.Stderr, "zwc: %v bytes decoded\n", n)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc:", err)
+			os.Exit(2)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(decodeCmd)
 
-	// Here you will define your flags and configuration settings.
+	decodeCmd.Flags().StringP("text", "t", "", "Text file")
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// decodeCmd.PersistentFlags().String("foo", "", "A help for foo")
+	decodeCmd.Flags().BoolP("checksum", "c", false, "Output checksum")
+	decodeCmd.Flags().BoolP("message", "m", false, "Output message")
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// decodeCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	decodeCmd.Flags().StringP("force", "f", "", "Force encoding")
 }
