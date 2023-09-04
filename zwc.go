@@ -680,7 +680,7 @@ func (enc *Encoding) encodedMinLen(n int) int {
 
 type decoder struct {
 	r  io.Reader
-	cd io.Reader
+	cd io.Reader // customDecoder
 }
 
 // NewDecoder creates a decoder which
