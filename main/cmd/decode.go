@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/yadayadajaychan/zwc"
 	"github.com/spf13/cobra"
@@ -36,6 +38,20 @@ var decodeCmd = &cobra.Command{
 		textFilename, err := cmd.Flags().GetString("text")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "zwc: error reading text flag")
+			fmt.Fprintln(os.Stderr, "zwc:", err)
+			os.Exit(2)
+		}
+
+		force, err := cmd.Flags().GetString("force")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc: error reading force flag")
+			fmt.Fprintln(os.Stderr, "zwc:", err)
+			os.Exit(2)
+		}
+
+		quiet, err := cmd.Flags().GetBool("quiet")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc: error reading quiet flag")
 			fmt.Fprintln(os.Stderr, "zwc:", err)
 			os.Exit(2)
 		}
@@ -66,10 +82,24 @@ var decodeCmd = &cobra.Command{
 			}
 		}
 
-		decoder := zwc.NewDecoder(text)
+		var decoder io.Reader
+		if force == "" {
+			decoder = zwc.NewDecoder(text)
+		} else {
+			v, e, c := parseForce(force)
+
+			// ignore values from header
+			_, _, _, err = zwc.DecodeHeaderFromReader(text)
+			if err != nil && !quiet {
+				fmt.Fprintln(os.Stderr, "zwc: warning: ", err)
+			}
+
+			encoding := zwc.NewEncoding(v, e, c)
+			decoder = zwc.NewCustomDecoder(encoding, text)
+		}
 
 		n, err := io.Copy(os.Stdout, decoder)
-		if verbose >= 3 {
+		if verbose >= 2 {
 			fmt.Fprintf(os.Stderr, "zwc: %v bytes decoded\n", n)
 		}
 		if err != nil {
@@ -88,4 +118,54 @@ func init() {
 	decodeCmd.Flags().BoolP("message", "m", false, "Output message")
 
 	decodeCmd.Flags().StringP("force", "f", "", "Force encoding")
+}
+
+// parse force flag
+func parseForce(force string) (v, e, c int) {
+	f := strings.Split(force, ",")
+
+	// check number of values
+	if len(f) != 2 {
+		fmt.Fprintln(os.Stderr, "zwc: force flag requires two comma-separated values for encoding and checksum type")
+		os.Exit(1)
+	}
+
+	// convert to int
+	var fconv [2]int
+	var err error
+
+	fconv[0], err = strconv.Atoi(f[0])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "zwc: force argument contains non-integer value(s)")
+		os.Exit(1)
+	}
+
+	fconv[1], err = strconv.Atoi(f[1])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "zwc: force argument contains non-integer value(s)")
+		os.Exit(1)
+	}
+
+	switch fconv[0] {
+	case 2, 3, 4:
+		e = fconv[0]
+	case 0, 8, 16, 32:
+		c = fconv[0]
+	default:
+		fmt.Fprintln(os.Stderr, "zwc: force argument contains invalid encoding/checksum type")
+		os.Exit(1)
+	}
+
+	switch fconv[1] {
+	case 2, 3, 4:
+		e = fconv[1]
+	case 0, 8, 16, 32:
+		c = fconv[1]
+	default:
+		fmt.Fprintln(os.Stderr, "zwc: force argument contains invalid encoding/checksum type")
+		os.Exit(1)
+	}
+
+	v = 1
+	return v, e, c
 }
