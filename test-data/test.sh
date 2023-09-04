@@ -71,6 +71,52 @@ do
 	fi
 done
 
+# vanilla decode
+for dir in vanilla/*/
+do
+	./zwc decode -t ${dir}/*.txt | diff -q - ${dir}/*.data
+	if [ $? -ne 0 ]
+	then
+		echo error during vanilla decode
+		exit 1
+	fi
+done
+
+## text from stdin
+for dir in vanilla/*/
+do
+	cat ${dir}/*.txt | ./zwc decode | diff -q - ${dir}/*.data
+	if [ $? -ne 0 ]
+	then
+		echo error during vanilla decode with text from stdin
+		exit 1
+	fi
+done
+
+
+# no-message decode
+for dir in no-message/*/
+do
+	./zwc decode -t ${dir}/*.txt | diff -q - ${dir}/*.data
+	if [ $? -ne 0 ]
+	then
+		echo error during no-message decode
+		exit 1
+	fi
+done
+
+## text from stdin
+for dir in no-message/*/
+do
+	cat ${dir}/*.txt | ./zwc decode | diff -q - ${dir}/*.data
+	if [ $? -ne 0 ]
+	then
+		echo error during no-message decode with text from stdin
+		exit 1
+	fi
+done
+
+
 rm zwc
 
 echo test.sh: all tests passed
