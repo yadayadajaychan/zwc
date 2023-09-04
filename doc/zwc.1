@@ -187,6 +187,8 @@ Only utf-8 is supported.
 If data is read from stdin in encode mode, \fBzwc\fR will not spread
 out the encoded data in the message because it can't get the size of the input
 stream.
+.PP
+Decoding is ~10x slower than encoding.
 .SH EXAMPLES
 \fB$ zwc encode -d data\fR
 .PP
