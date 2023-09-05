@@ -83,7 +83,7 @@ If \fIMESSAGE\fR is supplied,
 this option has no effect.
 .RE
 .P
-\fBdecode\fR [\fB\-t\fR \fITEXT\fR] [\fB\-cm\fR] [\fB\-f\fR {\fICHECKSUM\fR|\fIENCODING\fR}]...
+\fBdecode\fR [\fB\-t\fR \fITEXT\fR] [\fB\-cm\fR] [\fB\-f\fR \fICHECKSUM\fR\fB,\fR\fIENCODING\fR]...
 .RS 4
 \fBzwc\fR takes \fITEXT\fR,
 decodes the hidden data,
@@ -101,7 +101,7 @@ Output the checksum value in hexadecimal instead of the data.
 \fB\-m\fR, \fB--message\fR
 Output the message instead of the data.
 .TP
-\fB\-f\fR, \fB--force\fR {\fICHECKSUM\fR|\fIENCODING\fR}
+\fB\-f\fR, \fB--force\fR \fICHECKSUM\fR\fB,\fR\fIENCODING\fR
 Force \fBzwc\fR to interpret the checksum or encoding of the data
 as \fICHECKSUM\fR or \fIENCODING\fR,
 even if the header says otherwise.
