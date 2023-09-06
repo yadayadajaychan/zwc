@@ -83,10 +83,20 @@ var decodeCmd = &cobra.Command{
 		}
 
 		var decoder io.Reader
+		var encoding *zwc.Encoding
+		var v, e, c int
+
 		if force == "" {
-			decoder = zwc.NewDecoder(text)
+			v, e, c, err = zwc.DecodeHeaderFromReader(text)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "zwc: ", err)
+				os.Exit(2)
+			}
+
+			encoding = zwc.NewEncoding(v, e, c)
+			decoder = zwc.NewCustomDecoder(encoding, text)
 		} else {
-			v, e, c := parseForce(force)
+			v, e, c = parseForce(force)
 
 			// ignore values from header
 			_, _, _, err = zwc.DecodeHeaderFromReader(text)
@@ -94,13 +104,15 @@ var decodeCmd = &cobra.Command{
 				fmt.Fprintln(os.Stderr, "zwc: warning: ", err)
 			}
 
-			encoding := zwc.NewEncoding(v, e, c)
+			encoding = zwc.NewEncoding(v, e, c)
 			decoder = zwc.NewCustomDecoder(encoding, text)
 		}
 
 		n, err := io.Copy(os.Stdout, decoder)
 		if verbose >= 2 {
+			fmt.Fprintf(os.Stderr, "zwc: version %v, encoding %v, checksum %v\n", v, e, c)
 			fmt.Fprintf(os.Stderr, "zwc: %v bytes decoded\n", n)
+			fmt.Fprintf(os.Stderr, "zwc: crc is %x\n", encoding.Checksum())
 		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "zwc:", err)
