@@ -111,7 +111,7 @@ var decodeCmd = &cobra.Command{
 		n, err := io.Copy(os.Stdout, decoder)
 		if verbose >= 2 {
 			fmt.Fprintf(os.Stderr, "zwc: version %v, encoding %v, checksum %v\n", v, e, c)
-			fmt.Fprintf(os.Stderr, "zwc: %v bytes decoded\n", n)
+			fmt.Fprintf(os.Stderr, "zwc: %v bytes of data decoded\n", n)
 			fmt.Fprintf(os.Stderr, "zwc: crc is %x\n", encoding.Checksum())
 		}
 		if err != nil {

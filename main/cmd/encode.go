@@ -103,7 +103,8 @@ var encodeCmd = &cobra.Command{
 			messageFilename = "/dev/stdin"
 		}
 
-		encoder := zwc.NewEncoder(createEncoding(cmd), os.Stdout)
+		encoding := createEncoding(cmd)
+		encoder := zwc.NewEncoder(encoding, os.Stdout)
 
 		var data, message io.Reader
 
@@ -235,10 +236,7 @@ var encodeCmd = &cobra.Command{
 		}
 
 		// encode data
-		n, err := io.Copy(encoder, data)
-		if verbose >= 3 {
-			fmt.Fprintf(os.Stderr, "zwc: %v bytes from data written\n", n)
-		}
+		nDataEncoded, err := io.Copy(encoder, data)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "zwc:", err)
 			os.Exit(2)
@@ -252,14 +250,21 @@ var encodeCmd = &cobra.Command{
 
 		if !noMessage {
 			// write rest of message
-			n, err = io.Copy(os.Stdout, message)
+			n, err := io.Copy(os.Stdout, message)
 			if verbose >= 3 {
-				fmt.Fprintf(os.Stderr, "zwc: %v bytes from message written\n", n + int64(fmi))
+				fmt.Fprintf(os.Stderr, "zwc: %v bytes of data encoded\n", n + int64(fmi))
 			}
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "zwc:", err)
 				os.Exit(2)
 			}
+		}
+
+		if verbose >= 2 {
+			fmt.Fprintf(os.Stderr, "zwc: version %v, encoding %v, checksum %v\n",
+						encoding.Version(), encoding.EncodingType(), encoding.ChecksumType())
+			fmt.Fprintf(os.Stderr, "zwc: %v bytes of data encoded\n", nDataEncoded)
+			fmt.Fprintf(os.Stderr, "zwc: crc is %x\n", encoding.Checksum())
 		}
 	},
 }

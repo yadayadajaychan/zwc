@@ -198,6 +198,18 @@ func NewCustomEncoding(table [16]string, delimChar rune, version, encodingType, 
 	}
 }
 
+func (enc *Encoding) Version() int {
+	return enc.version
+}
+
+func (enc *Encoding) EncodingType() int {
+	return enc.encodingType
+}
+
+func (enc *Encoding) ChecksumType() int {
+	return enc.checksumType
+}
+
 func (enc *Encoding) Encode(dst, src []byte) int {
 	di := 0
 	di += utf8.EncodeRune(dst[di:], enc.delimChar)
