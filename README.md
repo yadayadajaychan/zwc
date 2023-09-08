@@ -17,10 +17,21 @@ Alternatively,
 go build -o zwc main/main.go
 ```
 
+## Installing
+
+```
+make install
+```
+
 ## Usage
 
 ```
 man ./doc/zwc.1
+```
+
+or if installed,
+```
+man zwc
 ```
 
 ## Copyright
