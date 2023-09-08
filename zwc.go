@@ -776,7 +776,13 @@ func (d *customDecoder) Read(p []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	src := make([]byte, d.enc.encodedMinLen(len(p)) - len(d.buf))
+	srcLen := d.enc.encodedMinLen(len(p)) - len(d.buf)
+	// ensure that at least one byte will be read
+	if srcLen <= 0 {
+		srcLen = 1
+	}
+
+	src := make([]byte, srcLen)
 	si, readErr := d.r.Read(src)
 
 	if si == 0 {
@@ -837,10 +843,6 @@ func (d *customDecoder) Read(p []byte) (n int, err error) {
 		}
 
 		if di != si { // delim char exists
-			if d.buf != nil { // buffer not empty
-				return n, CorruptPayloadError{IncompleteByte: true}
-			}
-
 			ddi := di + utf8.RuneLen(d.enc.delimChar)
 			if ddi < si { // delim char is not the last character
 				d.encodedChecksum = append(d.encodedChecksum, src[ddi:si]...)

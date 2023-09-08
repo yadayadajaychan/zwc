@@ -581,7 +581,44 @@ func TestEncodeAndEncoderAndDecodeAndDecoder(t *testing.T) {
 		}
 	}
 
-	// Read method of customDecoder
+	// Read method of customDecoder with 1 byte slice
+	for i, tc := range testCases {
+		delimChar := string(zwc.V1DelimCharUTF8)
+		encoded := strings.Split(tc.expected, delimChar)
+
+		v, e, c, err := zwc.DecodeHeader([]byte(encoded[1]))
+		if err != nil {
+			t.Error("DecodeHeader returned an error of", err)
+		}
+
+		enc := zwc.NewEncoding(v, e, c)
+		r := bytes.NewBufferString(encoded[2] + delimChar + encoded[3])
+		d := zwc.NewCustomDecoder(enc, r)
+
+		p := make([]byte, 1)
+		var data []byte
+
+		for {
+			var n int
+			n, err = d.Read(p)
+			data = append(data, p[:n]...)
+			if err != nil {
+				break
+			}
+		}
+
+		if err != io.EOF {
+			t.Error("testcase", i, ": Read returned an err of", err)
+		}
+		if len(data) != len(tc.data) {
+			t.Errorf("Expected %v, got %v", len(tc.data), len(data))
+		}
+		if string(data) != string(tc.data) {
+			t.Errorf("Expected %q, got %q", tc.data, data)
+		}
+	}
+
+	// Read method of customDecoder with 2 byte slice
 	for i, tc := range testCases {
 		delimChar := string(zwc.V1DelimCharUTF8)
 		encoded := strings.Split(tc.expected, delimChar)
@@ -618,7 +655,36 @@ func TestEncodeAndEncoderAndDecodeAndDecoder(t *testing.T) {
 		}
 	}
 
-	// Read method of decoder
+	// Read method of decoder with 1 byte slice
+	for i, tc := range testCases {
+		r := bytes.NewBufferString(tc.expected)
+		d := zwc.NewDecoder(r)
+
+		p := make([]byte, 1)
+		var data []byte
+
+		var n int
+		var err error
+		for {
+			n, err = d.Read(p)
+			data = append(data, p[:n]...)
+			if err != nil {
+				break
+			}
+		}
+
+		if err != io.EOF {
+			t.Error("testcase", i, ": Read returned an error of", err)
+		}
+		if len(data) != len(tc.data) {
+			t.Errorf("Expected %v, got %v", len(tc.data), len(data))
+		}
+		if string(data) != string(tc.data) {
+			t.Errorf("Expected %q, got %q", tc.data, data)
+		}
+	}
+
+	// Read method of decoder with 2 byte slice
 	for i, tc := range testCases {
 		r := bytes.NewBufferString(tc.expected)
 		d := zwc.NewDecoder(r)
