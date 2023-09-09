@@ -19,6 +19,7 @@ go build -o zwc main/main.go
 
 ## Installing
 
+The following command should work on Unix-like operating systems.
 ```
 make install
 ```
