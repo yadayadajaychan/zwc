@@ -727,6 +727,25 @@ func TestDecodeRawAndRawDecoder(t *testing.T) {
 		{1, 4, 0, "\xcd\x8f\xe2\x80\xac\xe2\x80\x8d\xe2\x80\xac\xe2\x81\xa0\xcd\x8f\xe2\x81\xa3\xe2\x81\xaa\xe2\x81\xa3\xe2\x81\xa2\xe2\x81\xa3\xe2\x81\xae\xe2\x81\xa3\xf0\x9d\x85\xb4\xe2\x80\xac\xe2\x81\xac\xcd\x8f", "\x02\x03helo\n"},
 	}
 
+	// test Encoding.DecodeRaw
+	for i, tc := range testCases {
+		enc := zwc.NewEncoding(tc.v, tc.e, tc.c)
+
+		data := make([]byte, enc.DecodedPayloadMaxLen(len(tc.encoded)))
+
+		n, _, err := enc.DecodeRaw(data, []byte(tc.encoded))
+		if err != nil {
+			t.Error("test case", i, ": Read returned an error of", err)
+		}
+		if n != len(tc.decoded) {
+			t.Errorf("Expected %v, got %v", len(tc.decoded), n)
+		}
+		if string(data[:n]) != tc.decoded {
+			t.Errorf("Expected %q, got %q", tc.decoded, string(data[:n]))
+		}
+	}
+
+	// test decodeRaw.Read
 	for i, tc := range testCases {
 		b := bytes.NewBufferString(tc.encoded)
 		enc := zwc.NewEncoding(tc.v, tc.e, tc.c)
