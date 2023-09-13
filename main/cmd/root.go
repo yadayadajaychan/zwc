@@ -22,11 +22,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	version = "0.1.1"
-	fileFormat = "0.9"
-)
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "zwc",

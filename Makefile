@@ -4,7 +4,7 @@ export GOFLAGS = -trimpath
 DESTDIR :=
 PREFIX := /usr/local
 
-VERSION := 0.1.1
+VERSION := $(shell grep -Po '\d\.\d\.\d' main/cmd/v.go)
 
 COMPLETION_DIR := completion
 RELEASE_DIR := release
