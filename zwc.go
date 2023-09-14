@@ -198,14 +198,17 @@ func NewCustomEncoding(table [16]string, delimChar rune, version, encodingType, 
 	}
 }
 
+// Version returns the encoding version
 func (enc *Encoding) Version() int {
 	return enc.version
 }
 
+// EncodingType returns the encoding type
 func (enc *Encoding) EncodingType() int {
 	return enc.encodingType
 }
 
+// ChecksumType returns the checksum type
 func (enc *Encoding) ChecksumType() int {
 	return enc.checksumType
 }
@@ -557,7 +560,7 @@ func (enc *Encoding) Decode(dst, src []byte) (n, m int, err error) {
 // n is the number of bytes written to dst and
 // m is the number of bytes read from src.
 func (enc *Encoding) DecodePayload(dst, src []byte) (n, m int, err error) {
-	n, m, err = enc.decodeRaw(dst, src)
+	n, m, err = enc.DecodeRaw(dst, src)
 
 	if enc.checksumType != 0 {
 		enc.checksum.Update(dst[:n])
@@ -577,7 +580,7 @@ func (enc *Encoding) DecodeChecksum(p []byte) (checksum uint64, m int, err error
 
 	checksumSlice := make([]byte, enc.DecodedPayloadMaxLen(len(p)))
 
-	n, m, err := enc.decodeRaw(checksumSlice, p)
+	n, m, err := enc.DecodeRaw(checksumSlice, p)
 
 	v, ok := err.(CorruptPayloadError)
 	if ok {
@@ -612,9 +615,11 @@ func (enc *Encoding) DecodeChecksum(p []byte) (checksum uint64, m int, err error
 	return checksum, m, nil
 }
 
+// DecodeRaw decodes the data in src
+// without interpreting delim chars.
 // n is number of bytes written to dst.
 // m is the number of bytes processed from src.
-func (enc *Encoding) decodeRaw(dst, src []byte) (n, m int, err error) {
+func (enc *Encoding) DecodeRaw(dst, src []byte) (n, m int, err error) {
 	var output byte
 	var shift int
 
@@ -832,9 +837,8 @@ func (d *customDecoder) Read(p []byte) (n int, err error) {
 		if ok {
 			// buffer unread bytes
 			if v.IncompleteByte {
-				tmp := src[m:di]
-				slices.Reverse(tmp)
-				d.buf = append(d.buf, tmp...)
+				slices.Reverse(src[m:di])
+				d.buf = append(d.buf, src[m:di]...)
 			} else {
 				return n, err
 			}
@@ -882,6 +886,70 @@ func (d *customDecoder) Read(p []byte) (n int, err error) {
 
 	if !d.delim && readErr == io.EOF {
 		return n, CorruptPayloadError{NoDelimChar: true}
+	}
+
+	return n, readErr
+}
+
+type rawDecoder struct {
+	enc *Encoding
+	r   io.Reader
+	buf []byte
+}
+
+func NewRawDecoder(enc *Encoding, r io.Reader) io.Reader {
+	return &rawDecoder{enc: enc, r: r}
+}
+
+func (d *rawDecoder) Read(p []byte) (n int, err error) {
+	srcLen := d.enc.encodedMinLen(len(p)) - len(d.buf)
+	// ensure at least one byte is read
+	if srcLen <= 0 {
+		srcLen = 1
+	}
+
+	src := make([]byte, srcLen)
+	si, readErr := d.r.Read(src)
+	if si == 0 {
+		if readErr == io.EOF && d.buf != nil {
+			return 0, CorruptPayloadError{IncompleteByte: true}
+		}
+		return 0, readErr
+	}
+
+	// append new data to end of buffer and delete buffer
+	if d.buf != nil {
+		slices.Reverse(d.buf)
+		src = append(d.buf, src...)
+		si += len(d.buf)
+		d.buf = nil
+	}
+
+	// check if last character is complete and add to buffer if not
+	for r, _ := utf8.DecodeLastRune(src[:si]); r == utf8.RuneError; {
+		si--
+		if si < 0 {
+			return 0, nil
+		}
+		d.buf = append(d.buf, src[si])
+		r, _ = utf8.DecodeLastRune(src[:si])
+	}
+
+	n, m, err := d.enc.DecodeRaw(p, src[:si])
+	v, ok := err.(CorruptPayloadError)
+	if ok {
+		if v.IncompleteByte {
+			if readErr == io.EOF {
+				return n, err
+			} else {
+				slices.Reverse(src[m:si])
+				d.buf = append(d.buf, src[m:si]...)
+			}
+		} else {
+			return n, err
+		}
+	} else if err != nil {
+		return n, err
 	}
 
 	return n, readErr

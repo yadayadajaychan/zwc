@@ -49,6 +49,13 @@ var decodeCmd = &cobra.Command{
 			os.Exit(2)
 		}
 
+		raw, err := cmd.Flags().GetBool("raw")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc: error reading raw flag")
+			fmt.Fprintln(os.Stderr, "zwc:", err)
+			os.Exit(2)
+		}
+
 		quiet, err := cmd.Flags().GetBool("quiet")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "zwc: error reading quiet flag")
@@ -65,6 +72,15 @@ var decodeCmd = &cobra.Command{
 
 		if textFilename == "" || textFilename == "-" {
 			textFilename = "/dev/stdin"
+		}
+
+		if raw && force == "" {
+			fmt.Fprintln(os.Stderr, "zwc: raw flag must be accompanied with force flag")
+			os.Exit(1)
+		}
+		if force != "" {
+			// parse force before opening input file
+			parseForce(force)
 		}
 
 		var text io.Reader
@@ -97,15 +113,19 @@ var decodeCmd = &cobra.Command{
 			decoder = zwc.NewCustomDecoder(encoding, text)
 		} else {
 			v, e, c = parseForce(force)
-
-			// ignore values from header
-			_, _, _, err = zwc.DecodeHeaderFromReader(text)
-			if err != nil && !quiet {
-				fmt.Fprintln(os.Stderr, "zwc: warning: ", err)
-			}
-
 			encoding = zwc.NewEncoding(v, e, c)
-			decoder = zwc.NewCustomDecoder(encoding, text)
+
+			if raw {
+				decoder = zwc.NewRawDecoder(encoding, text)
+			} else {
+				// read header but ignore values
+				_, _, _, err = zwc.DecodeHeaderFromReader(text)
+				if err != nil && !quiet {
+					fmt.Fprintln(os.Stderr, "zwc: warning:", err)
+				}
+
+				decoder = zwc.NewCustomDecoder(encoding, text)
+			}
 		}
 
 		n, err := io.Copy(os.Stdout, decoder)
@@ -130,6 +150,7 @@ func init() {
 	decodeCmd.Flags().BoolP("message", "m", false, "Output message")
 
 	decodeCmd.Flags().StringP("force", "f", "", "Force encoding")
+	decodeCmd.Flags().BoolP("raw", "r", false, "Raw decode")
 }
 
 // parse force flag

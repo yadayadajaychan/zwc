@@ -51,6 +51,28 @@ do
 	cat ${dir}/*.txt | ./zwc decode | diff -q - ${dir}/*.data
 done
 
+for dir in raw/*/
+do
+	source ${dir}/parameters
+
+	# raw decode
+	./zwc decode -rf $CHECKSUM,$ENCODING -t ${dir}/*.txt | diff -q - ${dir}/*.raw
+
+	## text from stdin
+	cat ${dir}/*.txt | ./zwc decode -rf $ENCODING,$CHECKSUM | diff -q - ${dir}/*.raw
+done
+
+for dir in force/*/
+do
+	source ${dir}/parameters
+
+	# force decode
+	./zwc decode -f $CHECKSUM,$ENCODING -t ${dir}/*.txt | diff -q - ${dir}/*.data
+
+	## text from stdin
+	cat ${dir}/*.txt | ./zwc decode -f $ENCODING,$CHECKSUM | diff -q - ${dir}/*.data
+done
+
 rm zwc
 
 echo test.sh: all tests passed

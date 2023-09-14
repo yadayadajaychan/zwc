@@ -714,6 +714,68 @@ func TestEncodeAndEncoderAndDecodeAndDecoder(t *testing.T) {
 	}
 }
 
+// TestDecodeRawAndRawDecoder tests DecodeRaw and rawDecoder
+func TestDecodeRawAndRawDecoder(t *testing.T) {
+	testCases := []struct {
+		v       int
+		e       int
+		c       int
+		encoded string
+		decoded string
+	}{
+		// header is interpreted as 4-bit when it is actually 2-bit
+		{1, 4, 0, "\xcd\x8f\xe2\x80\xac\xe2\x80\x8d\xe2\x80\xac\xe2\x81\xa0\xcd\x8f\xe2\x81\xa3\xe2\x81\xaa\xe2\x81\xa3\xe2\x81\xa2\xe2\x81\xa3\xe2\x81\xae\xe2\x81\xa3\xf0\x9d\x85\xb4\xe2\x80\xac\xe2\x81\xac\xcd\x8f", "\x02\x03helo\n"},
+	}
+
+	// test Encoding.DecodeRaw
+	for i, tc := range testCases {
+		enc := zwc.NewEncoding(tc.v, tc.e, tc.c)
+
+		data := make([]byte, enc.DecodedPayloadMaxLen(len(tc.encoded)))
+
+		n, _, err := enc.DecodeRaw(data, []byte(tc.encoded))
+		if err != nil {
+			t.Error("test case", i, ": Read returned an error of", err)
+		}
+		if n != len(tc.decoded) {
+			t.Errorf("Expected %v, got %v", len(tc.decoded), n)
+		}
+		if string(data[:n]) != tc.decoded {
+			t.Errorf("Expected %q, got %q", tc.decoded, string(data[:n]))
+		}
+	}
+
+	// test decodeRaw.Read
+	for i, tc := range testCases {
+		b := bytes.NewBufferString(tc.encoded)
+		enc := zwc.NewEncoding(tc.v, tc.e, tc.c)
+		d := zwc.NewRawDecoder(enc, b)
+
+		var data []byte
+		p := make([]byte, 1)
+
+		var err error
+		var n int
+		for {
+			n, err = d.Read(p)
+			data = append(data, p[:n]...)
+			if err != nil {
+				break
+			}
+		}
+
+		if err != io.EOF {
+			t.Error("test case", i, ": Read returned an error of", err)
+		}
+		if len(data) != len(tc.decoded) {
+			t.Errorf("Expected %v, got %v", len(tc.decoded), len(data))
+		}
+		if string(data) != tc.decoded {
+			t.Errorf("Expected %q, got %q", tc.decoded, string(data))
+		}
+	}
+}
+
 // TestEncoderNumberOfBytesWritten tests that
 // the number of bytes returned by encoder.Write
 // is the same as the input data

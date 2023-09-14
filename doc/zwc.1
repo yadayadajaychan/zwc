@@ -14,7 +14,7 @@
 .\"
 .\" You should have received a copy of the GNU General Public License along
 .\" with ZWC. If not, see <https://www.gnu.org/licenses/>.
-.TH ZWC 1 2023-08-16 "ZWC v0.0.1" "ZWC Manual"
+.TH ZWC 1 2023-09-13 "ZWC v0.2.0" "ZWC Manual"
 .SH NAME
 zwc \- encodes/decodes data into zero-width characters
 .SH SYNOPSIS
@@ -83,7 +83,7 @@ If \fIMESSAGE\fR is supplied,
 this option has no effect.
 .RE
 .P
-\fBdecode\fR [\fB\-t\fR \fITEXT\fR] [\fB\-cm\fR] [\fB\-f\fR \fICHECKSUM\fR\fB,\fR\fIENCODING\fR]...
+\fBdecode\fR [\fB\-t\fR \fITEXT\fR] [\fB\-cm\fR] [\fB\-f\fR \fICHECKSUM\fR\fB,\fR\fIENCODING\fR [\fB\-r\fR]]
 .RS 4
 \fBzwc\fR takes \fITEXT\fR,
 decodes the hidden data,
@@ -102,13 +102,18 @@ Output the checksum value in hexadecimal instead of the data.
 Output the message instead of the data.
 .TP
 \fB\-f\fR, \fB--force\fR \fICHECKSUM\fR\fB,\fR\fIENCODING\fR
-Force \fBzwc\fR to interpret the checksum or encoding of the data
-as \fICHECKSUM\fR or \fIENCODING\fR,
+Force \fBzwc\fR to interpret the checksum and encoding of the data
+as \fICHECKSUM\fR and \fIENCODING\fR,
 even if the header says otherwise.
+The order of \fICHECKSUM\fR and \fIENCODING\fR
+do not matter.
 .br
 Valid values for \fICHECKSUM\fR are: 0, 8, 16, 32.
 .br
 Valid values for \fIENCODING\fR are: 2, 3, 4.
+.TP
+\fB\-r\fR, \fB--raw\fR
+Do not interpret the delimiter character.
 .RE
 .P
 \fBtest\fR [\fB\-t\fR \fITEXT\fR] [{\fB-h\fR|\fB-p\fR}]
