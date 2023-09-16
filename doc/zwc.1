@@ -176,9 +176,6 @@ Using a denser encoding is more efficient in terms of encoded data size but
 may cause more issues because there are more characters being used
 which can potentially interfere with the message
 (depending on the language of the message).
-.PP
-When decoding, if there are multiple files within the same message,
-they will be concatenated and a warning will be issued.
 .SH CAVEATS
 The message may not contain
 any of the zero-width characters used to encode the data.
@@ -186,16 +183,13 @@ To see which zero-width characters are used for each encoding type,
 refer to \fBzwc\fR(5) or the specification found on the ZWC project page.
 .PP
 When pasting into the terminal, the maximum line length is 4096 chars and
-anything after that is discarded. This ensures that the terminal can always
-receive more input until at least one line can be read, but as a consequence,
-\fBzwc\fR will be unable to read the discarded characters. If this is the case,
-use a file or a pipe instead of the terminal.
+anything after that is discarded.
+If this is the case, use a file or a pipe instead of the terminal.
 .SH BUGS
 Only utf-8 is supported.
 .PP
-If data is read from stdin in encode mode, \fBzwc\fR will not spread
-out the encoded data in the message because it can't get the size of the input
-stream.
+When encoding, \fBzwc\fR will not spread
+out the encoded data in the message.
 .PP
 Decoding is ~10x slower than encoding.
 .SH EXAMPLES
