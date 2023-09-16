@@ -39,7 +39,7 @@ For example, \fBe\fR, \fBen\fR, \fBenc\fR, etc.
 can be used to specify the \fBencode\fR subcommand.
 .P
 \fBencode\fR [\fB\-d\fR \fIDATA\fR] [\fB\-m\fR \fIMESSAGE\fR] \
-[\fB\-c\fR \fICHECKSUM\fR] [\fB\-e\fR \fIENCODING\fR] [\fB\-in\fR]
+[\fB\-c\fR \fICHECKSUM\fR] [\fB\-e\fR \fIENCODING\fR] [\fB\-inb\fR]
 .RS 4
 \fBzwc\fR takes \fIDATA\fR,
 encodes it into zero-width characters,
@@ -81,6 +81,10 @@ the string "EOF" on its own line
 Do not intersperse the encoded data within a message.
 If \fIMESSAGE\fR is supplied,
 this option has no effect.
+.TP
+\fB\-b\fR, \fB--buffer-stdin\fR
+Buffer standard input before outputting text to standard output.
+If standard input is connected to a terminal, it is buffered regardless.
 .RE
 .P
 \fBdecode\fR [\fB\-t\fR \fITEXT\fR] [\fB\-cm\fR] [\fB\-f\fR \fICHECKSUM\fR\fB,\fR\fIENCODING\fR [\fB\-r\fR]]
