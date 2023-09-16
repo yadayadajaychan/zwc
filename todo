@@ -1,2 +1,5 @@
+-c and -m flag for decode
 cat decoder
+test subcommand
+verbose flag
 malformed input tests
