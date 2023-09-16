@@ -19,7 +19,7 @@ zwc:
 
 .PHONY: completion
 completion:
-	mkdir -p $(COMPLETION_DIR) && zwc completion bash > $(COMPLETION_DIR)/bash
+	mkdir -p $(COMPLETION_DIR) && ./zwc completion bash > $(COMPLETION_DIR)/bash
 
 .PHONY: test
 test:
