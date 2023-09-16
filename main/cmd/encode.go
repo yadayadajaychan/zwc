@@ -64,6 +64,13 @@ var encodeCmd = &cobra.Command{
 			os.Exit(2)
 		}
 
+		buffer, err := cmd.Flags().GetBool("buffer-stdin")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "zwc: error reading buffer-stdin flag")
+			fmt.Fprintln(os.Stderr, "zwc:", err)
+			os.Exit(2)
+		}
+
 		verbose, err := cmd.Flags().GetCount("verbose")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "zwc: error reading verbose flag")
@@ -145,7 +152,10 @@ var encodeCmd = &cobra.Command{
 			message = &messageBuffer
 		} else if noMessage {
 			if dataFilename == "/dev/stdin" {
-				if term.IsTerminal(int(os.Stdin.Fd())) {
+				if term.IsTerminal(int(os.Stdin.Fd())) || buffer {
+					if verbose >= 1 {
+						fmt.Fprintln(os.Stderr, "zwc: buffering data from stdin")
+					}
 					data = bufferStdin()
 				} else {
 					data = os.Stdin
@@ -157,36 +167,18 @@ var encodeCmd = &cobra.Command{
 					os.Exit(1)
 				}
 			}
-		} else if dataFilename == "/dev/stdin" && term.IsTerminal(int(os.Stdin.Fd())) {
-			// buffer data if connected to terminal
-			if verbose >= 1 {
-				fmt.Fprintln(os.Stderr, "zwc: reading data from terminal")
-			}
-
-			data = bufferStdin()
-
-			message, err = os.Open(messageFilename)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "zwc:", err)
-				os.Exit(1)
-			}
-		} else if messageFilename == "/dev/stdin" && term.IsTerminal(int(os.Stdin.Fd())) {
-			//buffer message if connected to a terminal
-			if verbose >= 1 {
-				fmt.Fprintln(os.Stderr, "zwc: reading message from terminal")
-			}
-
-			message = bufferStdin()
-
-			data, err = os.Open(dataFilename)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "zwc:", err)
-				os.Exit(1)
-			}
 		} else {
 			if dataFilename == "/dev/stdin" {
-				// /dev/stdin may not exist on all systems
-				data = os.Stdin
+				// buffer data if connected to terminal or buffer-stdin flag is set
+				if term.IsTerminal(int(os.Stdin.Fd())) || buffer {
+					if verbose >= 1 {
+						fmt.Fprintln(os.Stderr, "zwc: buffering data from stdin")
+					}
+					data = bufferStdin()
+				} else {
+					// /dev/stdin may not exist on all systems
+					data = os.Stdin
+				}
 			} else {
 				data, err = os.Open(dataFilename)
 				if err != nil {
@@ -196,8 +188,16 @@ var encodeCmd = &cobra.Command{
 			}
 
 			if messageFilename == "/dev/stdin" {
-				// /dev/stdin may not exist on all systems
-				message = os.Stdin
+				// buffer message if connected to terminal or buffer-stdin flag is set
+				if term.IsTerminal(int(os.Stdin.Fd())) || buffer {
+					if verbose >= 1 {
+						fmt.Fprintln(os.Stderr, "zwc: buffering message from stdin")
+					}
+					message = bufferStdin()
+				} else {
+					// /dev/stdin may not exist on all systems
+					message = os.Stdin
+				}
 			} else {
 				message, err = os.Open(messageFilename)
 				if err != nil {
@@ -280,6 +280,8 @@ func init() {
 
 	encodeCmd.Flags().BoolP("interactive", "i", false, "Interactive mode")
 	encodeCmd.Flags().BoolP("no-message", "n", false, "No message")
+
+	encodeCmd.Flags().BoolP("buffer-stdin", "b", false, "Buffer stdin")
 }
 
 func createEncoding(cmd *cobra.Command) *zwc.Encoding {
@@ -319,13 +321,11 @@ func createEncoding(cmd *cobra.Command) *zwc.Encoding {
 func bufferStdin() *bytes.Buffer {
 	var buffer bytes.Buffer
 
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		buffer.WriteString(scanner.Text() + "\n")
-	}
+	_, err := io.Copy(&buffer, os.Stdin)
 
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(os.Stderr, "zwc:", err)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "zwc: error buffering from stdin")
+		fmt.Fprintln(os.Stderr, "zwc:", err)
 		os.Exit(2)
 	}
 
