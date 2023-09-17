@@ -465,6 +465,16 @@ func (e CorruptPayloadError) Error() string {
 	return e.msg
 }
 
+// Split splits src into two slices:
+// header which can be passed to DecodeHeader,
+// and payload which can be passed to Encoding.Decode.
+func Split(src []byte) (header, payload []byte, err error) {
+	i := strings.IndexRune(string(src), V1DelimChar) + len(V1DelimCharUTF8)
+	i = i + strings.IndexRune(string(src[i:]), V1DelimChar) + len(V1DelimCharUTF8)
+
+	return src[:i], src[i:], nil
+}
+
 // DecodeHeader takes an encoded header
 // with or without any delim chars and
 // returns the encoding settings for
