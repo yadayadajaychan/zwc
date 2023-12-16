@@ -162,7 +162,7 @@ CHECK: 0xCBF43926
 
 # Copyright Information
 
-Copyright (C) 2023 Ethan Cheng \<ethanrc0528@gmail.com\>
+Copyright (C) 2023 Ethan Cheng \<ethan@nijika.org\>
 
 This file is part of ZWC.
 

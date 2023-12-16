@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Ethan Cheng <ethanrc0528@gmail.com>
+// Copyright (C) 2023 Ethan Cheng <ethan@nijika.org>
 //
 // This file is part of ZWC.
 //
@@ -32,7 +32,7 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("ZWC Program Version %v\n", version)
 		fmt.Printf("ZWC File Format Version %v\n\n", fileFormat)
-		fmt.Println(`Copyright (C) 2023 Ethan Cheng <ethanrc0528@gmail.com>
+		fmt.Println(`Copyright (C) 2023 Ethan Cheng <ethan@nijika.org>
 License GPLv3: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
 This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.`)
